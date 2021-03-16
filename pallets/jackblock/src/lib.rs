@@ -14,7 +14,7 @@ pub trait Config: frame_system::Config {
 }
 
 decl_storage! {
-	trait Store for Module<T: Config> as Guess {
+	trait Store for Module<T: Config> as JackBlock {
 
 	}
 }
