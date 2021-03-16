@@ -1,5 +1,5 @@
 {
-    "SessionIdType": "u32",
+    "SessionIdType": "u128",
     "BetType": "u32",
     "GuessNumbersType": "[u8; 6]",
     "Bet": {
