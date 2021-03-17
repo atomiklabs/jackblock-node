@@ -260,6 +260,7 @@ impl pallet_sudo::Config for Runtime {
 
 impl pallet_jackblock::Config for Runtime {
 	type Event = Event;
+	type Randomness = RandomnessCollectiveFlip;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
