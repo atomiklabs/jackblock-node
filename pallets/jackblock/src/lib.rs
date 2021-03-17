@@ -173,4 +173,9 @@ impl<T: Config> Module<T> {
 
 		(rng.pick_u32(MAX_GUESS_NUMBER - MIN_GUESS_NUMBER) + MIN_GUESS_NUMBER) as u8
 	}
+
+	#[cfg(test)]
+	fn set_session_id(session_id: SessionIdType) {
+		SessionId::put(session_id);
+	}
 }
