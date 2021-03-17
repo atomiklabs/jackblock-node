@@ -1,0 +1,10 @@
+{
+    "SessionIdType": "u128",
+    "BetType": "u32",
+    "GuessNumbersType": "[u8; 6]",
+    "Bet": {
+        "account_id": "AccountId",
+        "guess_numbers": "GuessNumbersType",
+        "bet": "BetType"
+    }
+}
