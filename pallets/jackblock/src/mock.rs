@@ -1,3 +1,5 @@
+use super::*;
+
 use crate as pallet_jackblock;
 use sp_core::H256;
 use frame_support::parameter_types;
@@ -51,8 +53,17 @@ impl system::Config for Test {
 	type SS58Prefix = SS58Prefix;
 }
 
+pub struct MockRandom;
+
+impl Randomness<H256> for MockRandom {
+    fn random(_subject: &[u8]) -> H256 {
+        H256([0; 32])
+    }
+}
+
 impl pallet_jackblock::Config for Test {
 	type Event = Event;
+	type Randomness = MockRandom;
 }
 
 // Build genesis storage according to the mock runtime.
