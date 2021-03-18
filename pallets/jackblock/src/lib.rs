@@ -146,19 +146,16 @@ impl<T: Config> Module<T> {
 	}
 
 	fn get_winners(session_numbers: GuessNumbersType, session_bets: Vec<Bet<T::AccountId>>) -> Winners<T::AccountId> {
-		let mut winners: Winners<T::AccountId> = Vec::new();
-		
-		for bet in session_bets {
-			let correct = session_numbers.iter()
-				.filter(|n| bet.guess_numbers.contains(n))
-				.fold(0, |acc, _| acc + 1);
+		session_bets.into_iter()
+			.map(|bet| {
+				let correct = session_numbers.iter()
+					.filter(|n| bet.guess_numbers.contains(n))
+					.fold(0, |acc, _| acc + 1);
 			
-			if correct > 0 {
-				winners.push((bet, correct));
-			}
-		}
-
-		winners
+				(bet, correct)
+			})
+			.filter(|x| x.1 > 0)
+			.collect::<Winners<T::AccountId>>()
 	}
 
 	fn next_session_id() -> Result<SessionIdType, DispatchError> {
