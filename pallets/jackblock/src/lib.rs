@@ -127,16 +127,19 @@ impl<T: Config> Module<T> {
 		let mut session_numbers: GuessNumbersType = [0; GUESS_NUMBERS_COUNT];
 
 		let mut i = 0;
+		let mut additional_seed = 0;
 		loop {
-			let next_session_number = Self::get_random_number(i as u8);
+			let next_session_number = Self::get_random_number(additional_seed);
 			if !session_numbers.contains(&next_session_number) {
-			    session_numbers[i] = next_session_number;
+				session_numbers[i] = next_session_number;
 			    i += 1;
 			}
 			
 			if i == GUESS_NUMBERS_COUNT {
 			    break;
 			}
+
+			additional_seed += 1;
 		}
 
 		session_numbers
