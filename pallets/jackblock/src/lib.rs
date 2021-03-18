@@ -125,8 +125,18 @@ impl<T: Config> Module<T> {
 
 	fn get_session_numbers() -> GuessNumbersType {
 		let mut session_numbers: GuessNumbersType = [0; GUESS_NUMBERS_COUNT];
-		for i in 0..6 {
-			session_numbers[i] = Self::get_random_number(i as u8);
+
+		let mut i = 0;
+		loop {
+			let next_session_number = Self::get_random_number(i as u8);
+			if !session_numbers.contains(&next_session_number) {
+			    session_numbers[i] = next_session_number;
+			    i += 1;
+			}
+			
+			if i == GUESS_NUMBERS_COUNT {
+			    break;
+			}
 		}
 
 		session_numbers
@@ -136,13 +146,9 @@ impl<T: Config> Module<T> {
 		let mut winners: Winners<T::AccountId> = Vec::new();
 		
 		for bet in session_bets {
-			let mut correct: u8 = 0;
-			
-			for session_number in session_numbers.iter() {
-				if bet.guess_numbers.contains(&session_number) {
-					correct += 1;
-				}
-			}
+			let correct = session_numbers.iter()
+				.filter(|n| bet.guess_numbers.contains(n))
+				.fold(0, |acc, _| acc + 1);
 			
 			if correct > 0 {
 				winners.push((bet, correct));
