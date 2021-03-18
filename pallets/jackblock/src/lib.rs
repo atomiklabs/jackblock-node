@@ -28,6 +28,9 @@ use sp_runtime::{
 		Hash,
 	},
 };
+use sp_io::{
+	offchain,
+};
 
 #[cfg(test)]
 mod mock;
@@ -87,6 +90,17 @@ decl_module! {
 		fn on_finalize(block_number: T::BlockNumber) {
 			if block_number % SessionLength::<T>::get() == T::BlockNumber::from(0u8) {
 				let _ = Self::finalize_the_session(block_number);
+			}
+		}
+
+		fn offchain_worker(block_number: T::BlockNumber) {
+			debug::info!("--- offchain_worker: {:?}", block_number);
+			let random_seed = offchain::random_seed();
+			let mut rng = RandomNumberGenerator::<BlakeTwo256>::new(random_seed.into());
+			
+			for i in 0..6 {
+				let random_value = rng.pick_u32(MAX_GUESS_NUMBER - MIN_GUESS_NUMBER) + MIN_GUESS_NUMBER;
+				debug::info!("--- offchain random_value[{}]: {:?}", i, random_value);
 			}
 		}
 
