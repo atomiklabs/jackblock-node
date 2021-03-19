@@ -11,7 +11,6 @@ use frame_support::{
 	},
 	traits::{
 		Vec,
-		Randomness,
 	},
 	dispatch::{
 		DispatchError,
@@ -25,7 +24,6 @@ use sp_runtime::{
 	RandomNumberGenerator,
 	traits::{
 		BlakeTwo256,
-		Hash,
 	},
 };
 use sp_io::{
@@ -40,7 +38,6 @@ mod tests;
 
 pub trait Config: frame_system::Config {
 	type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
-	type Randomness: Randomness<Self::Hash>;
 }
 
 const SESSION_IN_BLOCKS: u8 = 10;
@@ -65,6 +62,8 @@ decl_storage! {
 		SessionId get(fn session_id): SessionIdType;
 		SessionLength: T::BlockNumber = T::BlockNumber::from(SESSION_IN_BLOCKS);
 		Bets get(fn bets): map hasher(blake2_128_concat) SessionIdType => Vec<Bet<T::AccountId>>;
+		
+		ClosedNotFinalisedSessions get(fn closed_not_finalised_sessions): Vec<SessionIdType>;
 	}
 }
 
@@ -89,19 +88,18 @@ decl_module! {
 
 		fn on_finalize(block_number: T::BlockNumber) {
 			if block_number % SessionLength::<T>::get() == T::BlockNumber::from(0u8) {
-				let _ = Self::finalize_the_session(block_number);
+				let _ = Self::close_the_session();
 			}
 		}
 
 		fn offchain_worker(block_number: T::BlockNumber) {
 			debug::info!("--- offchain_worker: {:?}", block_number);
-			let random_seed = offchain::random_seed();
-			let mut rng = RandomNumberGenerator::<BlakeTwo256>::new(random_seed.into());
-			
-			for i in 0..6 {
-				let random_value = rng.pick_u32(MAX_GUESS_NUMBER - MIN_GUESS_NUMBER) + MIN_GUESS_NUMBER;
-				debug::info!("--- offchain random_value[{}]: {:?}", i, random_value);
+
+			if Self::closed_not_finalised_sessions().is_empty() {
+				return
 			}
+
+			Self::generate_session_numers_and_sign();
 		}
 
 		#[weight = 10_000]
@@ -119,44 +117,31 @@ decl_module! {
 
 			Self::deposit_event(RawEvent::NewBet(session_id, new_bet));
 		}
+
+		#[weight = 10_000]
+		pub fn finalize_the_session(origin, session_id: SessionIdType, session_numbers: GuessNumbersType) -> Result<(), DispatchError> {
+			// ensure signed by off-chain worker
+
+			let session_bets = Bets::<T>::get(session_id);
+			
+			let winners = Self::get_winners(session_numbers, session_bets);
+
+			// remove session_id from ClosedNotFinalisedSessions
+			
+			debug::info!("--- finalize_the_session: {}", session_id);
+			debug::info!("--- session_numbers: {:?}", session_numbers);
+			debug::info!("--- winners: {:?}", winners);
+	
+			Ok(())
+		}
 	}
 }
 
 impl<T: Config> Module<T> {
-	fn finalize_the_session(_block_number: T::BlockNumber) -> Result<(), DispatchError> {
+	fn close_the_session() -> Result<(), DispatchError> {
 		let session_id = Self::next_session_id()?;
-		let session_numbers = Self::get_session_numbers();
-		let session_bets = Bets::<T>::get(session_id);
-		
-		let winners = Self::get_winners(session_numbers, session_bets);
-		
-		debug::info!("--- finalize_the_session: {}", session_id);
-		debug::info!("--- session_numbers: {:?}", session_numbers);
-		debug::info!("--- winners: {:?}", winners);
-
+		ClosedNotFinalisedSessions::mutate(|x| x.push(session_id));
 		Ok(())
-	}
-
-	fn get_session_numbers() -> GuessNumbersType {
-		let mut session_numbers: GuessNumbersType = [0; GUESS_NUMBERS_COUNT];
-
-		let mut i = 0;
-		let mut additional_seed = 0;
-		loop {
-			let next_session_number = Self::get_random_number(additional_seed);
-			if !session_numbers.contains(&next_session_number) {
-				session_numbers[i] = next_session_number;
-			    i += 1;
-			}
-			
-			if i == GUESS_NUMBERS_COUNT {
-			    break;
-			}
-
-			additional_seed += 1;
-		}
-
-		session_numbers
 	}
 
 	fn get_winners(session_numbers: GuessNumbersType, session_bets: Vec<Bet<T::AccountId>>) -> Winners<T::AccountId> {
@@ -180,22 +165,44 @@ impl<T: Config> Module<T> {
 		Ok(session_id)
 	}
 
-	fn get_random_number(additional_seed: u8) -> u8 {
-		let random_seed = (
-			T::Randomness::random_seed(),
-			<frame_system::Module<T>>::extrinsic_index(),
-			additional_seed,
-		).encode();
+	#[cfg(test)]
+	fn set_session_id(session_id: SessionIdType) {
+		SessionId::put(session_id);
+	}
 
-		let random_seed = BlakeTwo256::hash(&random_seed);
 
-		let mut rng = <RandomNumberGenerator<BlakeTwo256>>::new(random_seed);
+
+	// --- Off-chain workers ------------------------
+
+	fn generate_session_numers_and_sign() {
+		let session_numbers = Self::get_session_numbers();
+
+		debug::warn!("--- off-chain session_numbers: {:?}", session_numbers);
+	}
+
+	fn get_random_number() -> u8 {
+		let random_seed = offchain::random_seed();
+		let mut rng = RandomNumberGenerator::<BlakeTwo256>::new(random_seed.into());
 
 		(rng.pick_u32(MAX_GUESS_NUMBER - MIN_GUESS_NUMBER) + MIN_GUESS_NUMBER) as u8
 	}
 
-	#[cfg(test)]
-	fn set_session_id(session_id: SessionIdType) {
-		SessionId::put(session_id);
+	fn get_session_numbers() -> GuessNumbersType {
+		let mut session_numbers: GuessNumbersType = [0; GUESS_NUMBERS_COUNT];
+
+		let mut i = 0;
+		loop {
+			let next_session_number = Self::get_random_number();
+			if !session_numbers.contains(&next_session_number) {
+				session_numbers[i] = next_session_number;
+			    i += 1;
+			}
+			
+			if i == GUESS_NUMBERS_COUNT {
+			    break;
+			}
+		}
+
+		session_numbers
 	}
 }
