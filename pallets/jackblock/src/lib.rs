@@ -16,14 +16,31 @@ use frame_support::{
 		DispatchError,
 	},
 	debug,
+	unsigned::{
+		ValidateUnsigned,
+	},
 };
 use frame_system::{
 	ensure_signed,
+	offchain::{
+		AppCrypto,
+		CreateSignedTransaction,
+		SignedPayload,
+		SigningTypes,
+		Signer,
+		SendUnsignedTransaction,
+	}
 };
 use sp_runtime::{
 	RandomNumberGenerator,
 	traits::{
 		BlakeTwo256,
+	},
+	RuntimeDebug,
+	transaction_validity::{
+		TransactionSource,
+		TransactionValidity,
+		InvalidTransaction,
 	},
 };
 use sp_io::{
@@ -36,8 +53,11 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-pub trait Config: frame_system::Config {
+pub trait Config: frame_system::Config + CreateSignedTransaction<Call<Self>> {
 	type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
+
+	/// The identifier type for an offchain worker.
+	type AuthorityId: AppCrypto<Self::Public, Self::Signature>;
 }
 
 const SESSION_IN_BLOCKS: u8 = 10;
@@ -50,11 +70,25 @@ type BetType = u32;
 type GuessNumbersType = [u8; GUESS_NUMBERS_COUNT];
 type Winners<AccountId> = Vec<(Bet<AccountId>, u8)>;
 
-#[derive(Encode, Decode, Clone, PartialEq, Eq, Debug)]
+#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
 pub struct Bet<AccountId> {
 	account_id: AccountId,
 	guess_numbers: GuessNumbersType,
 	bet: BetType,
+}
+
+#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
+pub struct SessionNumbersPayload<Public, BlockNumber> {
+	public: Public,
+	block_number: BlockNumber,
+	session_id: SessionIdType,
+	session_numbers: GuessNumbersType,
+}
+
+impl<T: SigningTypes> SignedPayload<T> for SessionNumbersPayload<T::Public, T::BlockNumber> {
+	fn public(&self) -> T::Public {
+		self.public.clone()
+	}
 }
 
 decl_storage! {
@@ -99,7 +133,9 @@ decl_module! {
 				return
 			}
 
-			Self::generate_session_numers_and_sign();
+			let session_id = Self::closed_not_finalised_sessions().pop().unwrap(); // TODO - replace unwrap()
+
+			Self::generate_session_numers_and_send(block_number, session_id); // TODO - handle errors
 		}
 
 		#[weight = 10_000]
@@ -119,8 +155,10 @@ decl_module! {
 		}
 
 		#[weight = 10_000]
-		pub fn finalize_the_session(origin, session_id: SessionIdType, session_numbers: GuessNumbersType) -> Result<(), DispatchError> {
+		pub fn finalize_the_session(origin, payload: SessionNumbersPayload<T::Public, T::BlockNumber>, _singature: T::Signature) -> Result<(), DispatchError> {
 			// ensure signed by off-chain worker
+
+			let SessionNumbersPayload {session_id, session_numbers, public, block_number} = payload;
 
 			let session_bets = Bets::<T>::get(session_id);
 			
@@ -174,10 +212,26 @@ impl<T: Config> Module<T> {
 
 	// --- Off-chain workers ------------------------
 
-	fn generate_session_numers_and_sign() {
+	fn generate_session_numers_and_send(block_number: T::BlockNumber, session_id: SessionIdType) -> Result<(), &'static str> {
 		let session_numbers = Self::get_session_numbers();
 
 		debug::warn!("--- off-chain session_numbers: {:?}", session_numbers);
+
+		let (_account, result) = Signer::<T, T::AuthorityId>::any_account().send_unsigned_transaction(
+			|account| SessionNumbersPayload {
+				public: account.public.clone(),
+				block_number,
+				session_id,
+				session_numbers,
+			},
+			|payload, signature| {
+				Call::finalize_the_session(payload, signature)
+			}
+		).ok_or("No local accounts accounts available")?;
+
+		result.map_err(|()| "Unable to submit transaction")?;
+
+		Ok(())
 	}
 
 	fn get_random_number() -> u8 {
@@ -204,5 +258,15 @@ impl<T: Config> Module<T> {
 		}
 
 		session_numbers
+	}
+}
+
+impl<T: Config> ValidateUnsigned for Module<T> {
+	type Call = Call<T>;
+
+	fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {
+		match call {
+			_ => return InvalidTransaction::Call.into(),
+		};
 	}
 }
