@@ -14,6 +14,7 @@ use frame_support::{
 	},
 	dispatch::{
 		DispatchError,
+		DispatchResult,
 	},
 	debug,
 	unsigned::{
@@ -22,6 +23,7 @@ use frame_support::{
 };
 use frame_system::{
 	ensure_signed,
+	ensure_none,
 	offchain::{
 		AppCrypto,
 		CreateSignedTransaction,
@@ -29,7 +31,7 @@ use frame_system::{
 		SigningTypes,
 		Signer,
 		SendUnsignedTransaction,
-	}
+	},
 };
 use sp_runtime::{
 	RandomNumberGenerator,
@@ -41,10 +43,16 @@ use sp_runtime::{
 		TransactionSource,
 		TransactionValidity,
 		InvalidTransaction,
+		ValidTransaction,
 	},
 };
 use sp_io::{
 	offchain,
+};
+use sp_core::{
+	crypto::{
+		KeyTypeId,
+	},
 };
 
 #[cfg(test)]
@@ -53,17 +61,44 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"jack");
+
+pub mod crypto {
+	use super::KEY_TYPE;
+	use sp_runtime::{
+		app_crypto::{app_crypto, sr25519},
+		traits::Verify,
+		MultiSigner,
+		MultiSignature,
+	};
+	use sp_core::sr25519::Signature as Sr25519Signature;
+	app_crypto!(sr25519, KEY_TYPE);
+
+	pub struct TestAuthId;
+	impl frame_system::offchain::AppCrypto<<Sr25519Signature as Verify>::Signer, Sr25519Signature> for TestAuthId {
+		type RuntimeAppPublic = Public;
+		type GenericSignature = sp_core::sr25519::Signature;
+		type GenericPublic = sp_core::sr25519::Public;
+	}
+
+	impl frame_system::offchain::AppCrypto<MultiSigner, MultiSignature> for TestAuthId {
+		type RuntimeAppPublic = Public;
+		type GenericSignature = sp_core::sr25519::Signature;
+		type GenericPublic = sp_core::sr25519::Public;
+	}
+}
+
 pub trait Config: frame_system::Config + CreateSignedTransaction<Call<Self>> {
 	type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
-
-	/// The identifier type for an offchain worker.
 	type AuthorityId: AppCrypto<Self::Public, Self::Signature>;
+	type Call: From<Call<Self>>;
 }
 
 const SESSION_IN_BLOCKS: u8 = 10;
 const MIN_GUESS_NUMBER: u32 = 1;
 const MAX_GUESS_NUMBER: u32 = 49;
 const GUESS_NUMBERS_COUNT: usize = 6;
+const UNSIGNED_TX_PRIORITY: u64 = 100;
 
 type SessionIdType = u128;
 type BetType = u32;
@@ -96,8 +131,7 @@ decl_storage! {
 		SessionId get(fn session_id): SessionIdType;
 		SessionLength: T::BlockNumber = T::BlockNumber::from(SESSION_IN_BLOCKS);
 		Bets get(fn bets): map hasher(blake2_128_concat) SessionIdType => Vec<Bet<T::AccountId>>;
-		
-		ClosedNotFinalisedSessions get(fn closed_not_finalised_sessions): Vec<SessionIdType>;
+		ClosedNotFinalisedSessionId get(fn closed_not_finalised_session): Option<SessionIdType>;
 	}
 }
 
@@ -111,6 +145,7 @@ decl_event!(
 decl_error! {
 	pub enum Error for Module<T: Config> {
 		SessionIdOverflow,
+		TryToFinalizeTheSessionWhichIsNotClosed,
 	}
 }
 
@@ -129,13 +164,14 @@ decl_module! {
 		fn offchain_worker(block_number: T::BlockNumber) {
 			debug::info!("--- offchain_worker: {:?}", block_number);
 
-			if Self::closed_not_finalised_sessions().is_empty() {
+			let session_id = Self::closed_not_finalised_session();
+			if session_id == None {
 				return
 			}
 
-			let session_id = Self::closed_not_finalised_sessions().pop().unwrap(); // TODO - replace unwrap()
-
-			Self::generate_session_numers_and_send(block_number, session_id); // TODO - handle errors
+			if let Err(error) = Self::generate_session_numbers_and_send(block_number, session_id.unwrap()) {
+				debug::info!("--- generate_session_numbers_and_send error: {}", error);
+			}
 		}
 
 		#[weight = 10_000]
@@ -155,30 +191,37 @@ decl_module! {
 		}
 
 		#[weight = 10_000]
-		pub fn finalize_the_session(origin, payload: SessionNumbersPayload<T::Public, T::BlockNumber>, _singature: T::Signature) -> Result<(), DispatchError> {
-			// ensure signed by off-chain worker
+		pub fn finalize_the_session(origin, payload: SessionNumbersPayload<T::Public, T::BlockNumber>, _singature: T::Signature) {
+			ensure_none(origin)?;
 
-			let SessionNumbersPayload {session_id, session_numbers, public, block_number} = payload;
+			ClosedNotFinalisedSessionId::try_mutate(|x| -> DispatchResult {
+				match x {
+					None => return Err(Error::<T>::TryToFinalizeTheSessionWhichIsNotClosed)?,
+					Some(value) => {
+						if *value != payload.session_id {
+							return Err(Error::<T>::TryToFinalizeTheSessionWhichIsNotClosed)?
+						}
 
-			let session_bets = Bets::<T>::get(session_id);
+						*x = None;
+						return Ok(())
+					},
+				};
+			})?;
+
+			let session_bets = Bets::<T>::get(payload.session_id);
+			let winners = Self::get_winners(payload.session_numbers, session_bets);
 			
-			let winners = Self::get_winners(session_numbers, session_bets);
-
-			// remove session_id from ClosedNotFinalisedSessions
-			
-			debug::info!("--- finalize_the_session: {}", session_id);
-			debug::info!("--- session_numbers: {:?}", session_numbers);
+			debug::info!("--- finalize_the_session: {}", payload.session_id);
+			debug::info!("--- session_numbers: {:?}", payload.session_numbers);
 			debug::info!("--- winners: {:?}", winners);
-	
-			Ok(())
 		}
 	}
 }
 
 impl<T: Config> Module<T> {
-	fn close_the_session() -> Result<(), DispatchError> {
+	fn close_the_session() -> DispatchResult {
 		let session_id = Self::next_session_id()?;
-		ClosedNotFinalisedSessions::mutate(|x| x.push(session_id));
+		ClosedNotFinalisedSessionId::put(session_id);
 		Ok(())
 	}
 
@@ -212,10 +255,10 @@ impl<T: Config> Module<T> {
 
 	// --- Off-chain workers ------------------------
 
-	fn generate_session_numers_and_send(block_number: T::BlockNumber, session_id: SessionIdType) -> Result<(), &'static str> {
+	fn generate_session_numbers_and_send(block_number: T::BlockNumber, session_id: SessionIdType) -> Result<(), &'static str> {
 		let session_numbers = Self::get_session_numbers();
 
-		debug::warn!("--- off-chain session_numbers: {:?}", session_numbers);
+		debug::info!("--- off-chain session_numbers: {:?}", session_numbers);
 
 		let (_account, result) = Signer::<T, T::AuthorityId>::any_account().send_unsigned_transaction(
 			|account| SessionNumbersPayload {
@@ -266,6 +309,20 @@ impl<T: Config> ValidateUnsigned for Module<T> {
 
 	fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {
 		match call {
+			Call::finalize_the_session(ref payload, ref signature) => {
+				let valid_signature = SignedPayload::<T>::verify::<T::AuthorityId>(payload, signature.clone());
+				if !valid_signature {
+					return InvalidTransaction::BadProof.into();
+				}
+
+				// TODO - ensure that was sent from off-chain worker
+
+				return ValidTransaction::with_tag_prefix("JackBlock/validate_unsigned/finalize_the_session")
+					.priority(UNSIGNED_TX_PRIORITY)
+					.longevity(5)
+					.propagate(true)
+					.build();
+			},
 			_ => return InvalidTransaction::Call.into(),
 		};
 	}
