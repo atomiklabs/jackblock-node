@@ -164,13 +164,10 @@ decl_module! {
 		fn offchain_worker(block_number: T::BlockNumber) {
 			debug::info!("--- offchain_worker: {:?}", block_number);
 
-			let session_id = Self::closed_not_finalised_session();
-			if session_id == None {
-				return
-			}
-
-			if let Err(error) = Self::generate_session_numbers_and_send(block_number, session_id.unwrap()) {
-				debug::info!("--- generate_session_numbers_and_send error: {}", error);
+			if let Some(session_id) = Self::closed_not_finalised_session() {
+				if let Err(error) = Self::generate_session_numbers_and_send(block_number, session_id) {
+					debug::info!("--- generate_session_numbers_and_send error: {}", error);
+				}
 			}
 		}
 
