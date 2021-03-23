@@ -326,8 +326,8 @@ pub type Executive = frame_executive::Executive<
 
 pub type SignedPayload = generic::SignedPayload<Call, SignedExtra>;
 
-impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Runtime
-where Call: From<LocalCall>
+impl<T> frame_system::offchain::CreateSignedTransaction<T> for Runtime
+where Call: From<T>
 {
 	fn create_transaction<C: frame_system::offchain::AppCrypto<Self::Public, Self::Signature>>(
 		call: Call,
