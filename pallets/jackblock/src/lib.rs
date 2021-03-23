@@ -94,7 +94,7 @@ pub trait Config: frame_system::Config + CreateSignedTransaction<Call<Self>> {
 	type Call: From<Call<Self>>;
 }
 
-const SESSION_IN_BLOCKS: u8 = 10;
+const SESSION_IN_BLOCKS: u8 = 5;
 const MIN_GUESS_NUMBER: u32 = 1;
 const MAX_GUESS_NUMBER: u32 = 49;
 const GUESS_NUMBERS_COUNT: usize = 6;

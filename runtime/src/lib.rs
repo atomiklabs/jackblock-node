@@ -287,7 +287,7 @@ construct_runtime!(
 		TransactionPayment: pallet_transaction_payment::{Module, Storage},
 		Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
 
-		JackBlock: pallet_jackblock::{Module, Call, Storage, Event<T>},
+		JackBlock: pallet_jackblock::{Module, Call, Storage, Event<T>, ValidateUnsigned},
 	}
 );
 
@@ -366,8 +366,8 @@ where Call: From<LocalCall>
 	}
 }
 
-impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
-where Call: From<C>
+impl<T> frame_system::offchain::SendTransactionTypes<T> for Runtime
+where Call: From<T>
 {
 	type OverarchingCall = Call;
 	type Extrinsic = UncheckedExtrinsic;
