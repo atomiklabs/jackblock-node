@@ -287,7 +287,7 @@ construct_runtime!(
 		TransactionPayment: pallet_transaction_payment::{Module, Storage},
 		Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
 
-		JackBlock: pallet_jackblock::{Module, Call, Storage, Event<T>, ValidateUnsigned},
+		JackBlock: pallet_jackblock::{Module, Call, Config<T>, Storage, Event<T>, ValidateUnsigned},
 	}
 );
 

@@ -37,6 +37,7 @@ use sp_runtime::{
 	RandomNumberGenerator,
 	traits::{
 		BlakeTwo256,
+		IdentifyAccount,
 	},
 	RuntimeDebug,
 	transaction_validity::{
@@ -65,21 +66,11 @@ pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"jack");
 
 pub mod crypto {
 	use super::KEY_TYPE;
-	use sp_runtime::{
-		app_crypto::{app_crypto, sr25519},
-		traits::Verify,
-		MultiSigner,
-		MultiSignature,
-	};
-	use sp_core::sr25519::Signature as Sr25519Signature;
+	use sp_runtime::{app_crypto::{app_crypto, sr25519}, MultiSigner, MultiSignature};
+
 	app_crypto!(sr25519, KEY_TYPE);
 
 	pub struct TestAuthId;
-	impl frame_system::offchain::AppCrypto<<Sr25519Signature as Verify>::Signer, Sr25519Signature> for TestAuthId {
-		type RuntimeAppPublic = Public;
-		type GenericSignature = sp_core::sr25519::Signature;
-		type GenericPublic = sp_core::sr25519::Public;
-	}
 
 	impl frame_system::offchain::AppCrypto<MultiSigner, MultiSignature> for TestAuthId {
 		type RuntimeAppPublic = Public;
@@ -132,6 +123,7 @@ decl_storage! {
 		SessionLength: T::BlockNumber = T::BlockNumber::from(SESSION_IN_BLOCKS);
 		Bets get(fn bets): map hasher(blake2_128_concat) SessionIdType => Vec<Bet<T::AccountId>>;
 		ClosedNotFinalisedSessionId get(fn closed_not_finalised_session): Option<SessionIdType>;
+		Authorities get(fn authorities) config(offchain_authorities): Vec<T::AccountId>;
 	}
 }
 
@@ -162,11 +154,11 @@ decl_module! {
 		}
 
 		fn offchain_worker(block_number: T::BlockNumber) {
-			debug::info!("--- offchain_worker: {:?}", block_number);
+			// TODO - set offchain worker lock to do not start twice for the same session
 
 			if let Some(session_id) = Self::closed_not_finalised_session() {
 				if let Err(error) = Self::generate_session_numbers_and_send(block_number, session_id) {
-					debug::info!("--- generate_session_numbers_and_send error: {}", error);
+					debug::info!("--- offchain_worker error: {}", error);
 				}
 			}
 		}
@@ -255,8 +247,6 @@ impl<T: Config> Module<T> {
 	fn generate_session_numbers_and_send(block_number: T::BlockNumber, session_id: SessionIdType) -> Result<(), &'static str> {
 		let session_numbers = Self::get_session_numbers();
 
-		debug::info!("--- off-chain session_numbers: {:?}", session_numbers);
-
 		let (_account, result) = Signer::<T, T::AuthorityId>::any_account().send_unsigned_transaction(
 			|account| SessionNumbersPayload {
 				public: account.public.clone(),
@@ -313,6 +303,10 @@ impl<T: Config> ValidateUnsigned for Module<T> {
 				}
 
 				// TODO - ensure that was sent from off-chain worker
+
+				let account_id = payload.public.clone().into_account();
+
+				debug::info!("--- signed by: {:?}", account_id);
 
 				return ValidTransaction::with_tag_prefix("JackBlock/validate_unsigned/finalize_the_session")
 					.priority(UNSIGNED_TX_PRIORITY)
