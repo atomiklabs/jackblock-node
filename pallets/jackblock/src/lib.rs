@@ -235,6 +235,10 @@ impl<T: Config> Module<T> {
 		Ok(session_id)
 	}
 
+	fn is_authority_account(account_id: &T::AccountId) -> bool {
+		Self::authorities().contains(account_id)
+	}
+
 	#[cfg(test)]
 	fn set_session_id(session_id: SessionIdType) {
 		SessionId::put(session_id);
@@ -302,11 +306,10 @@ impl<T: Config> ValidateUnsigned for Module<T> {
 					return InvalidTransaction::BadProof.into();
 				}
 
-				// TODO - ensure that was sent from off-chain worker
-
 				let account_id = payload.public.clone().into_account();
-
-				debug::info!("--- signed by: {:?}", account_id);
+				if !Self::is_authority_account(&account_id) {
+					return InvalidTransaction::BadProof.into();
+				}
 
 				return ValidTransaction::with_tag_prefix("JackBlock/validate_unsigned/finalize_the_session")
 					.priority(UNSIGNED_TX_PRIORITY)
