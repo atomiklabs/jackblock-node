@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Todo
+    about: Create new todo for jackblock project
+    url: https://github.com/korzewski/jackblock/issues/new?template=Todo.md&projects=korzewski/jackblock/1
