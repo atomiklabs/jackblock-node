@@ -269,6 +269,7 @@ impl pallet_jackblock::Config for Runtime {
 	type Event = Event;
 	type AuthorityId = pallet_jackblock::crypto::TestAuthId;
 	type Call = Call;
+  type Currency = Balances;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.

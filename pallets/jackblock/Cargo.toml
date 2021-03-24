@@ -23,6 +23,7 @@ sp-core = { default-features = false, version = '3.0.0' }
 serde = { version = "1.0.119" }
 
 [dev-dependencies]
+pallet-balances = { version = '3.0.0' }
 
 [features]
 default = ['std']
