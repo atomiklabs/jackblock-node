@@ -1,13 +1,11 @@
 ---
-name: Ask a Question
-about: Ask a question about this template.
+name: Todo
+about: Create new todo for jackblock project
 title: ""
-labels: question
-assignees: ""
+project: 1
 ---
 
-**Question**
+Short description
 
-_Please include information such as the following: is your question to clarify an existing resource
-or are you asking about something new? what are you trying to accomplish? where have you looked for
-answers?_
+### Requirements
+- Requirement details
