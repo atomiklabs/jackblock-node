@@ -2,7 +2,7 @@
 name: Todo
 about: Create new todo for jackblock project
 title: ""
-project: jackblock
+projects: jackblock
 ---
 
 Short description
