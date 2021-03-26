@@ -1,8 +1,9 @@
 start:
 	cargo run --release -- --dev --tmp
 
-keystore-add:
-	curl http://localhost:9933 -H "Content-Type:application/json;charset=utf-8" -d "@keystores/node-0-jack.json"
+add-private-keys:
+	curl http://localhost:9933 -H "Content-Type:application/json;charset=utf-8" -d "@keystores/private-key-aura.json" && \
+	curl http://localhost:9933 -H "Content-Type:application/json;charset=utf-8" -d "@keystores/private-key-grandpa.json"
 
 node-build:
 	cargo build --release
