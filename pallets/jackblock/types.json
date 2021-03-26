@@ -13,5 +13,6 @@
         "block_number": "BlockNumber",
         "session_id": "SessionIdType",
         "session_numbers": "GuessNumbersType"
-    }
+    },
+    "Winners": "Vec<(Bet, u8)>"
 }

@@ -1,5 +1,5 @@
 start:
-	cargo run -- --dev --tmp
+	cargo run --release -- --dev --tmp
 
 keystore-add:
 	curl http://localhost:9933 -H "Content-Type:application/json;charset=utf-8" -d "@keystores/node-0-jack.json"
@@ -8,7 +8,7 @@ node-build:
 	cargo build --release
 
 node-0-start:
-	./target/release/node-template \
+	./target/release/node-template -lruntime=debug \
 	--base-path ./tmp-private-chain/node_0 \
 	--chain private \
 	--port 30333 \
@@ -20,7 +20,7 @@ node-0-start:
 	--name jackblock-node-0
 
 node-1-start:
-	./target/release/node-template \
+	./target/release/node-template -lruntime=debug \
 	--base-path ./tmp-private-chain/node_1 \
 	--chain private \
 	--port 30334 \
@@ -30,6 +30,14 @@ node-1-start:
 	--rpc-methods Unsafe \
 	--bootnodes /ip4/127.0.0.1/tcp/30333/p2p/12D3KooWEyoppNCUx8Yx66oV9fJnriXwCcXwDDUA2kj6vnc6iDEp \
 	--name jackblock-node-1
+
+add-all-keys:
+	make node-0-add-key-aura && \
+	make node-0-add-key-grandpa && \
+	make node-0-add-key-jack && \
+	make node-1-add-key-aura && \
+	make node-1-add-key-grandpa && \
+	make node-1-add-key-jack \
 
 node-0-add-key-aura:
 	curl http://localhost:9933 -H "Content-Type:application/json;charset=utf-8" -d "@keystores/node-0-aura.json"

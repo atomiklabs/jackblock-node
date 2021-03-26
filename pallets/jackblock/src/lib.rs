@@ -131,6 +131,7 @@ decl_event!(
 	pub enum Event<T> where AccountId = <T as frame_system::Config>::AccountId {
 		NewBet(SessionIdType, Bet<AccountId>),
 		Winners(SessionIdType, Winners<AccountId>),
+		SessionResults(SessionIdType, GuessNumbersType, Winners<AccountId>),
 	}
 );
 
@@ -158,6 +159,7 @@ decl_module! {
 
 			if let Some(session_id) = Self::closed_not_finalised_session() {
 				if let Err(error) = Self::generate_session_numbers_and_send(block_number, session_id) {
+					debug::RuntimeLogger::init();
 					debug::info!("--- offchain_worker error: {}", error);
 				}
 			}
@@ -200,9 +202,12 @@ decl_module! {
 			let session_bets = Bets::<T>::get(payload.session_id);
 			let winners = Self::get_winners(payload.session_numbers, session_bets);
 			
+			debug::RuntimeLogger::init();
 			debug::info!("--- finalize_the_session: {}", payload.session_id);
 			debug::info!("--- session_numbers: {:?}", payload.session_numbers);
 			debug::info!("--- winners: {:?}", winners);
+
+			Self::deposit_event(RawEvent::SessionResults(payload.session_id, payload.session_numbers, winners));
 		}
 	}
 }
