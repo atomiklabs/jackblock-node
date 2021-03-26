@@ -13,3 +13,5 @@
 .local
 
 /tmp-private-chain
+/keystores/private-key-aura.json
+/keystores/private-key-grandpa.json
