@@ -1,0 +1,27 @@
+--- node-0: aura
+Secret phrase `soap shaft humble repair jeans grape combine prepare hip swim rotate above` is account:
+Secret seed:      0x69d07c33845784f26105a96bbad0236e515e88593b2045f4e8150db6d53da1bf
+Public key (hex): 0x8c95143789a7de6b1081b8de5d2882797f4b8d7e49b7d18bed2c9dfba0093749
+Account ID:       0x8c95143789a7de6b1081b8de5d2882797f4b8d7e49b7d18bed2c9dfba0093749
+SS58 Address:     5FF2r4dhNUoX3Taw6CFno8KNWYbkkkt7iXdhRJ2i9tVsZkf2
+
+--- node-0: grandpa
+Secret phrase `soap shaft humble repair jeans grape combine prepare hip swim rotate above` is account:
+Secret seed:      0x69d07c33845784f26105a96bbad0236e515e88593b2045f4e8150db6d53da1bf
+Public key (hex): 0x3ba3259226032472d23bdf929e87ca64a67a0d6bae1590026f2878f390bfe46e
+Account ID:       0x3ba3259226032472d23bdf929e87ca64a67a0d6bae1590026f2878f390bfe46e
+SS58 Address:     5DQu9UzdjWbp6Ec7Hmh94d7EtE9WgRhnE4BquZ5LyBk6XR9u
+
+--- node-1: aura
+Secret phrase `arrow hockey kid window adapt daughter below arch mule flight citizen kick` is account:
+Secret seed:      0xa4cca6a8cbe70968f5e9589a318c4dcd6f4f66467d87af30c7b7739aed9747dd
+Public key (hex): 0x1c012da62a15bc32bddcc446ead445e6e3db649718b75f7564e52110f9d16259
+Account ID:       0x1c012da62a15bc32bddcc446ead445e6e3db649718b75f7564e52110f9d16259
+SS58 Address:     5ChRYjcG7gyGWnHWm2MVkH1XJGy4KomkKuaGeSNEEbGQGomb
+
+--- node-1: grandpa
+Secret phrase `arrow hockey kid window adapt daughter below arch mule flight citizen kick` is account:
+Secret seed:      0xa4cca6a8cbe70968f5e9589a318c4dcd6f4f66467d87af30c7b7739aed9747dd
+Public key (hex): 0xd673017b1fe89ae315440ef77fbe126a5c73dfef550e51621cf464e9d4f2f77e
+Account ID:       0xd673017b1fe89ae315440ef77fbe126a5c73dfef550e51621cf464e9d4f2f77e
+SS58 Address:     5GutGWxH9BaB4F4FS3vDTyjHKidcP2f3Qa8HjWzfiq7ruRgp

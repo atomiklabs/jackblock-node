@@ -1,4 +1,4 @@
-use sp_core::{Pair, Public, sr25519};
+use sp_core::{Pair, Public, sr25519, ed25519};
 use node_template_runtime::{
 	AccountId, AuraConfig, BalancesConfig, GenesisConfig, GrandpaConfig,
 	SudoConfig, SystemConfig, WASM_BINARY, Signature, JackBlockConfig,
@@ -132,11 +132,57 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 	))
 }
 
+pub fn private_testnet_config() -> Result<ChainSpec, String> {
+	let wasm_binary = WASM_BINARY.ok_or_else(|| "Development wasm binary not available".to_string())?;
+
+	Ok(ChainSpec::from_genesis(
+		// Name
+		"Private Testnet",
+		// ID
+		"private_testnet",
+		ChainType::Live,
+		move || testnet_genesis(
+			wasm_binary,
+			// Initial PoA authorities
+			vec![
+				(
+					sr25519::Public::from_slice(&hex!("8c95143789a7de6b1081b8de5d2882797f4b8d7e49b7d18bed2c9dfba0093749")).into(),
+					ed25519::Public::from_slice(&hex!("3ba3259226032472d23bdf929e87ca64a67a0d6bae1590026f2878f390bfe46e")).into(),
+				),
+				(
+					sr25519::Public::from_slice(&hex!("1c012da62a15bc32bddcc446ead445e6e3db649718b75f7564e52110f9d16259")).into(),
+					ed25519::Public::from_slice(&hex!("d673017b1fe89ae315440ef77fbe126a5c73dfef550e51621cf464e9d4f2f77e")).into(),
+				),
+			],
+			// Off-chain authorities
+			vec![
+				hex!("8c95143789a7de6b1081b8de5d2882797f4b8d7e49b7d18bed2c9dfba0093749").into(),
+				hex!("1c012da62a15bc32bddcc446ead445e6e3db649718b75f7564e52110f9d16259").into(),
+			],
+			// Sudo account
+			get_account_id_from_seed::<sr25519::Public>("Alice"),
+			// Pre-funded accounts
+			vec![],
+			true,
+		),
+		// Bootnodes
+		vec![],
+		// Telemetry
+		None,
+		// Protocol ID
+		None,
+		// Properties
+		None,
+		// Extensions
+		None,
+	))
+}
+
 /// Configure initial storage state for FRAME modules.
 fn testnet_genesis(
 	wasm_binary: &[u8],
 	initial_authorities: Vec<(AuraId, GrandpaId)>,
-	offchain_authorities: Vec<AccountId>,
+	offchain_authorities: Vec<AccountId>, // TO BE REMOVED --------------------------
 	root_key: AccountId,
 	endowed_accounts: Vec<AccountId>,
 	_enable_println: bool,

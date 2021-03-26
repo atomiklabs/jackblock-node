@@ -1,0 +1,10 @@
+{
+  "jsonrpc":"2.0",
+  "id":1,
+  "method":"author_insertKey",
+  "params": [
+    "gran",
+    "soap shaft humble repair jeans grape combine prepare hip swim rotate above",
+    "0x3ba3259226032472d23bdf929e87ca64a67a0d6bae1590026f2878f390bfe46e"
+  ]
+}
