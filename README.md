@@ -14,6 +14,7 @@ Players can be rewarded with extra **coins** and **dynamic NFT's** hosted on **I
 ![alt text](https://github.com/korzewski/jackblock/blob/master/readme-files/jackblock-concept_v1.jpg?raw=true)
 
 ### Run `nodes` and start private network
+- Remove `tmp-private-chain` folder (if exist inside project root)
 - |terminal 1| -  Build executable file: `make node-build`
 - |terminal 1| - Start predefined Node-0 instance: `make node-0-start`
 - |terminal 2| - Start predefined Node-1 instance: `make node-1-start`
