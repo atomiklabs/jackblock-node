@@ -91,16 +91,15 @@ pub trait Config: frame_system::Config + CreateSignedTransaction<Call<Self>> {
   type Currency: Currency<Self::AccountId>;
 }
 
-const SESSION_IN_BLOCKS: u8 = 5;
+const BET_PRICE: u32 = 100;
+const SESSION_IN_BLOCKS: u8 = 2;
 const MIN_GUESS_NUMBER: u32 = 1;
-const MAX_GUESS_NUMBER: u32 = 49;
+const MAX_GUESS_NUMBER: u32 = 10;
 const GUESS_NUMBERS_COUNT: usize = 6;
 const UNSIGNED_TX_PRIORITY: u64 = 100;
 const PALLET_ID: ModuleId = ModuleId(*b"JackPot!"); // 8 character long
 
-
 type SessionIdType = u128;
-type BetType = u32;
 type GuessNumbersType = [u8; GUESS_NUMBERS_COUNT];
 type Winners<AccountId> = Vec<(Bet<AccountId>, u8)>;
 
@@ -111,7 +110,6 @@ type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Con
 pub struct Bet<AccountId> {
 	account_id: AccountId,
 	guess_numbers: GuessNumbersType,
-	bet: BetType,
 }
 
 #[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
@@ -183,25 +181,19 @@ decl_module! {
 		}
 
 		#[weight = 10_000]
-		pub fn add_new_bet(origin, guess_numbers: GuessNumbersType, bet: BetType) {
+		pub fn add_new_bet(origin, guess_numbers: GuessNumbersType) {
 			let account_id = ensure_signed(origin)?;
 			let session_id = SessionId::get();
 
 			let new_bet = Bet {
 				account_id: account_id.clone(),
 				guess_numbers,
-				bet,
 			};
 
-
 			Bets::<T>::try_mutate(session_id, |bets| -> DispatchResult {
-        // TODO: extract bet_price to the config
-        T::Currency::transfer(&account_id, &Self::account_id(), 5_u32.into(), KeepAlive)?;
-
+        T::Currency::transfer(&account_id, &Self::account_id(), BET_PRICE.into(), KeepAlive)?;
         bets.push(new_bet.clone());
-
-        // Self::deposit_event(RawEvent::NewBet(session_id, new_bet));
-
+        Self::deposit_event(RawEvent::NewBet(session_id, new_bet));
         Ok(())
       })?;
 
@@ -234,14 +226,20 @@ decl_module! {
 
       let (_, pot_balance) = Self::pot();
 
-      for winner in winners {
-        let winner_account = winner.0.account_id;
 
-        T::Currency::transfer(&Self::account_id(), &winner_account, pot_balance, KeepAlive)?;
+      // winners
+      // --- finalize_the_session: 39
+      // --- session_numbers: [6, 5, 9, 4, 8, 1]
+      // --- winners: [(Bet { account_id: d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d (5GrwvaEF...), guess_numbers: [1, 2, 3, 4, 5, 6] }, 4)]
 
-        // Self::deposit_event(RawEvent::Winner(winner_account, pot_balance));
-      }
+      // for winner in winners {
+      //   let winner_account = winner.0.account_id;
+      //   let guessed = winner.1;
 
+      //   T::Currency::transfer(&Self::account_id(), &winner_account, pot_balance, KeepAlive)?;
+
+      //   // Self::deposit_event(RawEvent::Winner(winner_account, pot_balance));
+      // }
 		}
 	}
 }
