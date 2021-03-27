@@ -1,0 +1,9 @@
+[workspace]
+
+[package]
+name = "winner"
+version = "0.1.0"
+authors = ["nick@deploy.at"]
+edition = "2018"
+
+[dependencies]
