@@ -97,7 +97,7 @@ const MIN_GUESS_NUMBER: u32 = 1;
 const MAX_GUESS_NUMBER: u32 = 10;
 const GUESS_NUMBERS_COUNT: usize = 6;
 const UNSIGNED_TX_PRIORITY: u64 = 100;
-const PALLET_ID: ModuleId = ModuleId(*b"JackPot!"); // 8 character long
+const PALLET_ID: ModuleId = ModuleId(*b"JackPot!");
 
 type SessionIdType = u128;
 type GuessNumbersType = [u8; GUESS_NUMBERS_COUNT];
@@ -161,8 +161,6 @@ decl_module! {
 		fn deposit_event() = default;
 
 		fn on_finalize(block_number: T::BlockNumber) {
-      // testing
-      //2021-03-24 21:42:18  ----- BALANCE (6d6f646c4a61636b506f74210000000000000000000000000000000000000000 (5EYCAe5b...), 0)
       // debug::info!("----- BALANCE {:?}", Self::pot());
 
 			if block_number % SessionLength::<T>::get() == T::BlockNumber::from(0u8) {
@@ -190,6 +188,7 @@ decl_module! {
 				guess_numbers,
 			};
 
+      // TASK: Transfer bets to jackblock pot #7
 			Bets::<T>::try_mutate(session_id, |bets| -> DispatchResult {
         T::Currency::transfer(&account_id, &Self::account_id(), BET_PRICE.into(), KeepAlive)?;
         bets.push(new_bet.clone());
@@ -224,22 +223,25 @@ decl_module! {
 			debug::info!("--- session_numbers: {:?}", payload.session_numbers);
 			debug::info!("--- winners: {:?}", winners);
 
-      let (_, pot_balance) = Self::pot();
 
+      // TASK: Transfer rewards to winners + fees #9
+      // TASK: Calculate balance rewards #8
+      // LOGIC: _POC/winner/src/lib.rs
 
-      // winners
-      // --- finalize_the_session: 39
-      // --- session_numbers: [6, 5, 9, 4, 8, 1]
-      // --- winners: [(Bet { account_id: d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d (5GrwvaEF...), guess_numbers: [1, 2, 3, 4, 5, 6] }, 4)]
+      // --- TO USE WHEN _POC READY  --- //
+      let (_, pot) = Self::pot();
+      // transfer rewards
+      T::Currency::transfer(&Self::account_id(), &winner_account, reward_per_winner, KeepAlive)?;
+      Self::deposit_event(RawEvent::Winner(winner_account, reward_per_winner));
 
-      // for winner in winners {
-      //   let winner_account = winner.0.account_id;
-      //   let guessed = winner.1;
+      // transfer fees
+      let authorities = Self::authorities();
+      authorities.for_each(|authoritiy| {
+         T::Currency::transfer(&Self::account_id(), &authoritiy, fee, KeepAlive)?;
+         Self::deposit_event(RawEvent::Fee(authoritiy, fee));
+      })
+      // --- END --- //
 
-      //   T::Currency::transfer(&Self::account_id(), &winner_account, pot_balance, KeepAlive)?;
-
-      //   // Self::deposit_event(RawEvent::Winner(winner_account, pot_balance));
-      // }
 		}
 	}
 }
