@@ -8,6 +8,7 @@ curl --location --request POST 'http://localhost:3000/api/generate-svg' \
 --data-raw '{
     "reward": 98234.23,
     "score": 4,
-    "scoreOutOf": 6
+    "scoreOutOf": 6,
+    "sessionId": "skibidibiba"
 }'
 ```

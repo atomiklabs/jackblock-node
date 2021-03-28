@@ -3,7 +3,7 @@ import * as fs from 'fs/promises';
 import { NextApiRequest, NextApiResponse } from 'next';
 
 export default async function generateSvg(req: NextApiRequest, res: NextApiResponse) {
-  const { reward, score, scoreOutOf } = req.body || {};
+  const { reward, score, scoreOutOf, sessionId = 'skibidibiba' } = req.body || {};
   const rewardFormatted = Intl.NumberFormat('en-US', {
     currency: 'USD',
     style: 'currency'
@@ -15,8 +15,10 @@ export default async function generateSvg(req: NextApiRequest, res: NextApiRespo
 
   const svgTemplate = svgTemplateFileBuffer.toString('utf8');
   const svgMarkup = svgTemplate
-    .replace('${headline}', `You won ${rewardFormatted}`)
-    .replace('${paragraph}', `Congratulations! You scored ${score} out of ${scoreOutOf} 🎊`);
+    .replace('{reward}', `${rewardFormatted}`)
+    .replace('{score}', score)
+    .replace('{scoreOutOf}', scoreOutOf)
+    .replace('{signature}', sessionId);
 
   res.setHeader('Content-Type', 'image/svg+xml');
   res.status(200).send(svgMarkup);
