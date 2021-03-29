@@ -1,4 +1,6 @@
-#![feature(slice_group_by)]
+// #![feature(slice_group_by)]
+mod group_by;
+pub use group_by::{GroupByTrait};
 
 const GUESS_NUMBERS_COUNT: usize = 6;
 
@@ -14,21 +16,21 @@ struct Bet<AccountId> {
 
 fn main() {
     // mock pot
-    let pot = 1000_f64;
+    let pot= 1000_f64;
     let fees = pot * 0.1;
     let pot_for_rewards = pot - fees;
     println!("Transferring ${} (10%) of fees from the pot of ${}!", fees, pot);
     println!("Pot for the winners ${}!", pot_for_rewards);
 
     // mock winners
-    let w1 = Bet { account_id: 1, guess_numbers: [1, 2, 3, 4, 5, 6] };
-    let w2 = Bet { account_id: 2, guess_numbers: [1, 2, 3, 4, 5, 6] };
-    let w3 = Bet { account_id: 3, guess_numbers: [1, 2, 3, 4, 5, 6] };
-    let w4 = Bet { account_id: 4, guess_numbers: [1, 2, 3, 4, 5, 6] };
-    let w5 = Bet { account_id: 5, guess_numbers: [1, 2, 3, 4, 5, 6] };
-    let w6 = Bet { account_id: 6, guess_numbers: [1, 2, 3, 4, 5, 6] };
+    let w1= Bet { account_id: 1, guess_numbers: [1, 2, 3, 4, 5, 6] };
+    let w2= Bet { account_id: 2, guess_numbers: [1, 2, 3, 4, 5, 6] };
+    let w3= Bet { account_id: 3, guess_numbers: [1, 2, 3, 4, 5, 6] };
+    let w4= Bet { account_id: 4, guess_numbers: [1, 2, 3, 4, 5, 6] };
+    let w5= Bet { account_id: 5, guess_numbers: [1, 2, 3, 4, 5, 6] };
+    let w6= Bet { account_id: 6, guess_numbers: [1, 2, 3, 4, 5, 6] };
 
-    // winners and their hits
+    // winner and their hits
     let winners: Winners<AccountId> = vec![
       (w1, 3),
       (w2, 3),
@@ -64,7 +66,7 @@ fn main() {
       }
     });
 
-   fn distribute_reward(reward_percentage: f64, winners: &[(Bet<u32>, u8)], pot_for_rewards: f64, hits: u32) -> () {
+   fn distribute_reward(reward_percentage: f64, winners: &[(Bet<u32>, u8)],pot_for_rewards: f64, hits: u32) -> () {
     let reward_from_pot = pot_for_rewards * reward_percentage;
     let winners_count = winners.len() as f64;
     let reward_per_winner = reward_from_pot / winners_count;
@@ -75,3 +77,4 @@ fn main() {
     });
   }
 }
+
