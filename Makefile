@@ -12,6 +12,8 @@ NODE_KEY?=0000000000000000000000000000000000000000000000000000000000000001 # PRI
 BOOT_NODE_PREFIX?=/ip4/127.0.0.1/tcp/$(PORT_0)/p2p
 BOOT_NODES?=$(BOOT_NODE_PREFIX)/12D3KooWEyoppNCUx8Yx66oV9fJnriXwCcXwDDUA2kj6vnc6iDEp
 
+PRIVATE_CHAIN_SPEC?=./privateChainSpecRaw.json
+
 start:
 	cargo run --release -- --dev --tmp
 
@@ -70,10 +72,11 @@ local-node-1-add-key-grandpa:
 local-node-1-add-key-jack:
 	curl http://localhost:$(RPC_PORT_1) -H "Content-Type:application/json;charset=utf-8" -d "@keystores/local-node-1-jack.json"
 
+
 private-boot-node-start:
 	./target/release/node-template -lruntime=debug \
 	--base-path $(BASE_PATH_PREFIX)/private \
-	--chain private \
+	--chain $(PRIVATE_CHAIN_SPEC) \
 	--port $(PORT_0) \
 	--ws-port $(WS_PORT_0) \
 	--rpc-port $(RPC_PORT_0) \
@@ -84,10 +87,10 @@ private-boot-node-start:
 private-node-start:
 	./target/release/node-template -lruntime=debug \
 	--base-path $(BASE_PATH_PREFIX)/$(NAME) \
-	--chain private \
-	--port $(PORT_1) \
-	--ws-port $(WS_PORT_1) \
-	--rpc-port $(RPC_PORT_1) \
+	--chain $(PRIVATE_CHAIN_SPEC) \
+	--port $(PORT_0) \
+	--ws-port $(WS_PORT_0) \
+	--rpc-port $(RPC_PORT_0) \
 	--validator \
 	--rpc-methods Unsafe \
 	--bootnodes $(BOOT_NODE_PREFIX)/$(BOOT_NODE_IDENTITY) \
