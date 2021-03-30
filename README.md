@@ -23,20 +23,20 @@ Players can be rewarded with extra **coins** and **dynamic NFT's** hosted on **I
 - |terminal 2| - Stop Node-1 and run it again: `make local-node-1-start`
 
 ### Start public network
-- Remove `tmp-private-chain` folder (if exist inside project root)
+- Remove `tmp-public-chain` folder (if exist inside project root)
 - Build executable file: `make node-build`
 - Each node has to identify themselves for `aura` (initializing) and `grandpa` (finalizing) block consensus:
   - Use `./keys/local-node-0-aura.json` and `./keys/local-node-0-grandpa.json` as a template
   - Create `./keys/private-key-aura.json` and `./keys/private-key-grandpa.json` where you replace only **Private Seed** and **Public key**
 - One person has to initialize the network
-  - Create **privateChainSpecRaw.json** file and share it with your validators: `make create-private-chain-spec`
-  - Run node: `make private-boot-node-start`
+  - Create **publicChainSpecRaw.json** file and share it with your validators: `make public-chain-spec`
+  - Run node: `make public-boot-node-start`
   - This will log in console something like this: "**Local node identity is**: `12D3KooWJxtLahuTcXBZhrpCbmjWqQnNEtM3sctoubmU6F5Dr2YY`"
   - Share this identity with validators
-  - Add aura and grandpa keys to keystore: `make private-node-add-keys`
+  - Add aura and grandpa keys to keystore: `make public-node-add-keys`
 - Rest of the validators:
-  - Run node: `make private-node-start NAME=<validator-name> BOOT_NODE_IP=<boot-node-ip-address> BOOT_NODE_IDENTITY=<initial-node-identity>`
-  - Add aura and grandpa keys to keystore: `make private-node-add-keys`
+  - Run node: `make public-node-start NAME=<validator-name> BOOT_NODE_IP=<boot-node-ip-address> BOOT_NODE_IDENTITY=<initial-node-identity>`
+  - Add aura and grandpa keys to keystore: `make public-node-add-keys`
 
 At this point you should be able to see new blocks initializing & finalizing properly. 
-Congrats, your blockchain works! enjoy ;)
+Congrats, your public blockchain works! enjoy ;)

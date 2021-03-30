@@ -12,7 +12,7 @@
 # The cache for chain data in container
 .local
 
-/tmp-private-chain
+/tmp-public-chain
+publicChainSpecRaw.json
 /keys/private-key-aura.json
 /keys/private-key-grandpa.json
-privateChainSpecRaw.json
