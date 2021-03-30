@@ -13,6 +13,6 @@
 .local
 
 /tmp-private-chain
-/keystores/private-key-aura.json
-/keystores/private-key-grandpa.json
+/keys/private-key-aura.json
+/keys/private-key-grandpa.json
 privateChainSpecRaw.json
