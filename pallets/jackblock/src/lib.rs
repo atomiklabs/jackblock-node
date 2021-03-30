@@ -67,6 +67,9 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+mod group_by;
+pub use group_by::{GroupByTrait};
+
 pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"jack");
 
 pub mod crypto {
@@ -90,8 +93,9 @@ pub trait Config: frame_system::Config + CreateSignedTransaction<Call<Self>> {
 	type Call: From<Call<Self>>;
   type Currency: Currency<Self::AccountId>;
 }
+type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
-const BET_PRICE: u32 = 100;
+// const BET_PRICE: BalanceOf<T> = 1000000000_u32.into();
 const SESSION_IN_BLOCKS: u8 = 2;
 const MIN_GUESS_NUMBER: u32 = 1;
 const MAX_GUESS_NUMBER: u32 = 10;
@@ -103,7 +107,6 @@ type SessionIdType = u128;
 type GuessNumbersType = [u8; GUESS_NUMBERS_COUNT];
 type Winners<AccountId> = Vec<(Bet<AccountId>, u8)>;
 
-type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
 
 #[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
@@ -183,6 +186,8 @@ decl_module! {
 			let account_id = ensure_signed(origin)?;
 			let session_id = SessionId::get();
 
+      let bet_price: BalanceOf<T> = 1000000000_u32.into();
+      //1000000000000000_u32
 			let new_bet = Bet {
 				account_id: account_id.clone(),
 				guess_numbers,
@@ -190,12 +195,14 @@ decl_module! {
 
       // TASK: Transfer bets to jackblock pot #7
 			Bets::<T>::try_mutate(session_id, |bets| -> DispatchResult {
-        T::Currency::transfer(&account_id, &Self::account_id(), BET_PRICE.into(), KeepAlive)?;
         bets.push(new_bet.clone());
-        Self::deposit_event(RawEvent::NewBet(session_id, new_bet));
         Ok(())
       })?;
 
+      debug::info!("--- ACCOUNT: {:?} / SELF: {:?}", &account_id, &Self::account_id());
+      debug::info!("--- bet_price: {:?}", bet_price);
+      T::Currency::transfer(&account_id, &Self::account_id(), bet_price, KeepAlive)?;
+      Self::deposit_event(RawEvent::NewBet(session_id, new_bet));
 		}
 
 		#[weight = 10_000]
@@ -223,23 +230,111 @@ decl_module! {
 			debug::info!("--- session_numbers: {:?}", payload.session_numbers);
 			debug::info!("--- winners: {:?}", winners);
 
+      let (_, pot) = Self::pot();
+      // mock pot
+      let pot: f64 = 1000_f64;
+
+
+
+
+
+
+
+
+
+
+
+      type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+      let price: BalanceOf<T> = 10000000000000000u128.into();
+
+
+
+
+
+
+
+
+      // let fee: f64 = price * 0.1;
+
+
+      let fees = pot * 0.1;
+
+
+      let pot_for_rewards = pot - fees;
+
+      let authorities = Self::authorities();
+
+      for authoritiy in authorities {
+        debug::info!("--- FeeForAuthority: {:?}, {:?} $", authoritiy, fees);
+      };
+
+      // authorities.for_each(|authoritiy| {
+      //   //  T::Currency::transfer(&Self::account_id(), &authoritiy, fee, KeepAlive)?;
+      //   debug::info!("--- FeeForAuthority: {:?}, {:?} $", authoritiy, fees);
+      //   //  Self::deposit_event(RawEvent::FeeForAuthority(authoritiy, fee));
+      // });
+
+      let distribute_reward = |reward_percentage: f64, winners: &[(Bet<T::AccountId>, u8)],pot_for_rewards: f64, hits: u32| -> () {
+        let reward_from_pot = pot_for_rewards * reward_percentage;
+        let winners_count = winners.len() as f64;
+        let reward_per_winner = reward_from_pot / winners_count;
+
+        winners.iter().for_each(|winner| {
+          let account = &winner.0.account_id;
+          // println!("Account {} won ${} by guessing {} numbers!", account, reward_per_winner, hits);
+          debug::info!("Account {:?} won ${:?} by guessing {:?} numbers!", account, reward_per_winner, hits);
+          // T::Currency::transfer(&Self::account_id(), &winner_account, reward_per_winner, KeepAlive)?;
+          // Self::deposit_event(RawEvent::RewardForWinner(winner_account, reward_per_winner));
+        });
+      };
+
+
+
+      let winners_to_reward: Winners<T::AccountId> = winners.into_iter().filter(|&(_, hits) | hits >= 3).collect();
+
+      // group by hits
+      let winners_grouped_by_hits = winners_to_reward.group_by(|(_, a_hits), (_, b_hits)| a_hits == b_hits);
+
+      winners_grouped_by_hits.for_each(|winners| {
+        let hits = winners[0].1; // eg.[ (Bet, hits), (Bet, hits) ]
+
+        match hits {
+          3 => {
+            distribute_reward(0.03, winners, pot_for_rewards, hits.into());
+          },
+          4 => {
+            distribute_reward(0.07, winners, pot_for_rewards, hits.into());
+          },
+          5 => {
+            distribute_reward(0.15, winners, pot_for_rewards, hits.into());
+          },
+          6 => {
+            distribute_reward(0.75, winners, pot_for_rewards, hits.into());
+          },
+          _ => debug::info!("Error handle?"),
+        }
+      });
+
+
+
+
 
       // TASK: Transfer rewards to winners + fees #9
       // TASK: Calculate balance rewards #8
       // LOGIC: _POC/winner/src/lib.rs
 
       // --- TO USE WHEN _POC READY  --- //
-      let (_, pot) = Self::pot();
-      // transfer rewards
-      T::Currency::transfer(&Self::account_id(), &winner_account, reward_per_winner, KeepAlive)?;
-      Self::deposit_event(RawEvent::Winner(winner_account, reward_per_winner));
+      // let (_, pot) = Self::pot();
+      // // transfer rewards
+      // T::Currency::transfer(&Self::account_id(), &winner_account, reward_per_winner, KeepAlive)?;
+      // Self::deposit_event(RawEvent::Winner(winner_account, reward_per_winner));
 
-      // transfer fees
-      let authorities = Self::authorities();
-      authorities.for_each(|authoritiy| {
-         T::Currency::transfer(&Self::account_id(), &authoritiy, fee, KeepAlive)?;
-         Self::deposit_event(RawEvent::Fee(authoritiy, fee));
-      })
+      // // transfer fees
+      // let authorities = Self::authorities();
+      // authorities.for_each(|authoritiy| {
+      //    T::Currency::transfer(&Self::account_id(), &authoritiy, fee, KeepAlive)?;
+      //    Self::deposit_event(RawEvent::Fee(authoritiy, fee));
+      // })
       // --- END --- //
 
 		}

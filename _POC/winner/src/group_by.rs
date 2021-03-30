@@ -12,7 +12,6 @@ impl<T> GroupByTrait<T> for [T] {
         GroupBy::new(self, pred)
     }
 }
-
 pub struct GroupBy<'a, T: 'a, P> {
     slice: &'a [T],
     predicate: P,
@@ -89,3 +88,4 @@ where
         }
     }
 }
+
