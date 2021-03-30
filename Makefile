@@ -10,7 +10,8 @@ BASE_PATH_PREFIX?=./tmp-private-chain
 KEYS_PATH_PREFIX?=keys
 TELEMETRY_URL?='wss://telemetry.polkadot.io/submit/ 0'
 NODE_KEY?=0000000000000000000000000000000000000000000000000000000000000001 # PRIVATE SEED FOR LOCAL NODE IDENTITY
-BOOT_NODE_PREFIX?=/ip4/127.0.0.1/tcp/$(PORT_0)/p2p
+BOOT_NODE_IP?=127.0.0.1
+BOOT_NODE_PREFIX?=/ip4/$(BOOT_NODE_IP)/tcp/$(PORT_0)/p2p
 BOOT_NODES?=$(BOOT_NODE_PREFIX)/12D3KooWEyoppNCUx8Yx66oV9fJnriXwCcXwDDUA2kj6vnc6iDEp
 
 PRIVATE_CHAIN_SPEC?=./privateChainSpecRaw.json
@@ -73,6 +74,9 @@ local-node-1-add-key-grandpa:
 local-node-1-add-key-jack:
 	curl http://localhost:$(RPC_PORT_1) -H "Content-Type:application/json;charset=utf-8" -d "@$(KEYS_PATH_PREFIX)/local-node-1-jack.json"
 
+
+create-private-chain-spec:
+	./target/release/node-template build-spec --chain=private --raw --disable-default-bootnode > privateChainSpecRaw.json
 
 private-boot-node-start:
 	./target/release/node-template -lruntime=debug \

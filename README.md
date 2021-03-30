@@ -29,8 +29,7 @@ Players can be rewarded with extra **coins** and **dynamic NFT's** hosted on **I
   - Use `./keys/local-node-0-aura.json` and `./keys/local-node-0-grandpa.json` as a template
   - Create `./keys/private-key-aura.json` and `./keys/private-key-grandpa.json` where you replace only **Private Seed** and **Public key**
 - One person has to initialize the network
-  - Create **privateChainSpecRaw.json** file and share it with your validators:
-  `./target/release/node-template build-spec --chain=private --raw --disable-default-bootnode > privateChainSpecRaw.json`: 
+  - Create **privateChainSpecRaw.json** file and share it with your validators: `make create-private-chain-spec`
   - Run node: `make private-boot-node-start`
   - This will log in console something like this: "**Local node identity is**: `12D3KooWJxtLahuTcXBZhrpCbmjWqQnNEtM3sctoubmU6F5Dr2YY`"
   - Share this identity with validators
