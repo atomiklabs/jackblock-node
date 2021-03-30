@@ -15,6 +15,7 @@ BOOT_NODE_PREFIX?=/ip4/$(BOOT_NODE_IP)/tcp/$(PORT_0)/p2p
 BOOT_NODES?=$(BOOT_NODE_PREFIX)/12D3KooWEyoppNCUx8Yx66oV9fJnriXwCcXwDDUA2kj6vnc6iDEp
 
 PRIVATE_CHAIN_SPEC?=./privateChainSpecRaw.json
+PRIVATE_RPC_CORS?=all
 
 start:
 	cargo run --release -- --dev --tmp
@@ -86,8 +87,9 @@ private-boot-node-start:
 	--ws-port $(WS_PORT_0) \
 	--rpc-port $(RPC_PORT_0) \
 	--validator \
+	--rpc-cors $(PRIVATE_RPC_CORS) \
 	--rpc-methods Unsafe \
-	--name jackblock-private-boot-node
+	--name jackblock-private-boot-node \
 
 private-node-start:
 	./target/release/node-template -lruntime=debug \
@@ -97,9 +99,10 @@ private-node-start:
 	--ws-port $(WS_PORT_0) \
 	--rpc-port $(RPC_PORT_0) \
 	--validator \
+	--rpc-cors $(PRIVATE_RPC_CORS) \
 	--rpc-methods Unsafe \
 	--bootnodes $(BOOT_NODE_PREFIX)/$(BOOT_NODE_IDENTITY) \
-	--name $(NAME)
+	--name $(NAME) \
 
 private-node-add-keys:
 	curl http://localhost:$(RPC_PORT_0) -H "Content-Type:application/json;charset=utf-8" -d "@$(KEYS_PATH_PREFIX)/private-key-aura.json" && \
