@@ -1,4 +1,4 @@
-start:
+run:
 	cargo run -- --dev --tmp
 
 keystore-add:
