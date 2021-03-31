@@ -61,9 +61,6 @@ use sp_core::{
 	},
 };
 use sp_arithmetic::Percent;
-use sp_arithmetic::FixedPointOperand;
-use sp_arithmetic::FixedPointNumber;
-
 
 #[cfg(test)]
 mod mock;
@@ -99,7 +96,7 @@ pub trait Config: frame_system::Config + CreateSignedTransaction<Call<Self>> {
 }
 type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
-const BET_PRICE: u32 = 1000000000;
+const BET_PRICE: u32 = 1000000000; // TODO: u128
 const SESSION_IN_BLOCKS: u8 = 5;
 const MIN_GUESS_NUMBER: u32 = 1;
 const MAX_GUESS_NUMBER: u32 = 10;
@@ -110,8 +107,6 @@ const PALLET_ID: ModuleId = ModuleId(*b"JackPot!");
 type SessionIdType = u128;
 type GuessNumbersType = [u8; GUESS_NUMBERS_COUNT];
 type Winners<AccountId> = Vec<(Bet<AccountId>, u8)>;
-
-
 
 #[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
 pub struct Bet<AccountId> {
@@ -170,8 +165,6 @@ decl_module! {
 		fn deposit_event() = default;
 
 		fn on_finalize(block_number: T::BlockNumber) {
-			// debug::info!("----- BALANCE {:?}", Self::pot());
-
 			if block_number % SessionLength::<T>::get() == T::BlockNumber::from(0u8) {
 				let _ = Self::close_the_session();
 			}
@@ -229,91 +222,54 @@ decl_module! {
 			let session_bets = Bets::<T>::get(payload.session_id);
 			let winners = Self::get_winners(payload.session_numbers, session_bets);
 
-			debug::info!("--- finalize_the_session: {}", payload.session_id);
-			debug::info!("--- session_numbers: {:?}", payload.session_numbers);
-			debug::info!("--- winners: {:?}", winners);
+			debug::info!("--- Finalize_the_session: {}", payload.session_id);
+			debug::info!("--- Session_numbers: {:?}", payload.session_numbers);
+			debug::info!("--- Winners: {:?}", winners);
 
-			let (_, pot) = Self::pot();
-			debug::info!("--- Pot before: {:?}", pot);
+			if winners.len() > 0 {
+				let (_, pot) = Self::pot();
+				let fees = Percent::from_percent(10) * pot;
+				let pot_for_rewards = pot.saturating_sub(fees);
+				let authorities = Self::authorities();
+				let authorities_count = authorities.len() as u32;
+				let reward_fee_per_authority: BalanceOf<T> = fees / authorities_count.into(); // TODO: fixed point safe division
 
-			let fees = Percent::from_percent(10) * pot;
-			debug::info!("--- Pot fees: {:?} $", fees);
+				debug::info!("--- Pot before: {:?}", pot);
+				debug::info!("--- Pot for fees: {:?} $", fees);
+				debug::info!("--- Pot for rewards: {:?} $", pot_for_rewards);
 
-			let pot_for_rewards = pot.saturating_sub(fees);
-			debug::info!("--- Pot for rewards: {:?} $", pot_for_rewards);
+				for authoritiy in authorities {
+					debug::info!("--- Reward for authoricity: {:?}, {:?} $", authoritiy, reward_fee_per_authority);
+					T::Currency::transfer(&Self::account_id(), &authoritiy, reward_fee_per_authority, KeepAlive)?;
+					Self::deposit_event(RawEvent::RewardFeeForAuthority(authoritiy, reward_fee_per_authority));
+				};
 
-			let authorities = Self::authorities();
-			let authorities_count = authorities.len() as u32;
-			let reward_fee_per_authority: BalanceOf<T> = fees / authorities_count.into(); // TODO: fixed point safe division
+				let winners_to_reward: Winners<T::AccountId> = winners.into_iter().filter(|&(_, hits) | hits >= 3).collect();
+				let winners_grouped_by_hits = winners_to_reward.group_by(|(_, a_hits), (_, b_hits)| a_hits == b_hits);
 
-			for authoritiy in authorities {
-				debug::info!("--- Reward for authoricity: {:?}, {:?} $", authoritiy, fees);
-				T::Currency::transfer(&Self::account_id(), &authoritiy, reward_fee_per_authority, KeepAlive)?;
-				Self::deposit_event(RawEvent::RewardFeeForAuthority(authoritiy, reward_fee_per_authority));
-			};
+				winners_grouped_by_hits.for_each(|winners| {
+					let hits = winners[0].1;
 
-
-			let distribute_reward = |reward_percentage: u8, winners: &[(Bet<T::AccountId>, u8)], pot_for_rewards: BalanceOf<T>, hits: u8| -> () {
-				let rewards_from_pot = Percent::from_percent(reward_percentage) * pot_for_rewards;
-				let winners_count = winners.len() as u32;
-				let reward_per_winner: BalanceOf<T> = rewards_from_pot / winners_count.into(); // TODO: fixed point safe division
-
-				winners.iter().for_each(|winner| {
-					let winner_account = &winner.0.account_id;
-					debug::info!("Account {:?} won {:?} $ by guessing {:?} numbers!", winner_account, reward_per_winner, hits);
-				 	let _ = T::Currency::transfer(&Self::account_id(), &winner_account, reward_per_winner, KeepAlive);
-					Self::deposit_event(RawEvent::RewardForWinner(winner_account.clone(), reward_per_winner));
+					match hits {
+						3 => {
+							Self::distribute_reward(3, winners, pot_for_rewards, hits);
+						},
+						4 => {
+							Self::distribute_reward(7, winners, pot_for_rewards, hits);
+						},
+						5 => {
+							Self::distribute_reward(15, winners, pot_for_rewards, hits);
+						},
+						6 => {
+							Self::distribute_reward(75, winners, pot_for_rewards, hits);
+						},
+						_ => debug::info!("Error distribute_reward"), // TODO: handle Error
+					}
 				});
-			};
 
-
-
-			let winners_to_reward: Winners<T::AccountId> = winners.into_iter().filter(|&(_, hits) | hits >= 3).collect();
-			let winners_grouped_by_hits = winners_to_reward.group_by(|(_, a_hits), (_, b_hits)| a_hits == b_hits);
-
-			winners_grouped_by_hits.for_each(|winners| {
-				let hits = winners[0].1;
-
-				match hits {
-					3 => {
-						distribute_reward(3, winners, pot_for_rewards, hits);
-					},
-					4 => {
-						distribute_reward(7, winners, pot_for_rewards, hits);
-					},
-					5 => {
-						distribute_reward(15, winners, pot_for_rewards, hits);
-					},
-					6 => {
-						distribute_reward(75, winners, pot_for_rewards, hits);
-					},
-					_ => debug::info!("Error handle?"),
-				}
-			});
-
-
-			let (_, pot) = Self::pot();
-			debug::info!("--- Pot after: {:?} $", pot);
-
-
-			// TASK: Transfer rewards to winners + fees #9
-			// TASK: Calculate balance rewards #8
-			// LOGIC: _POC/winner/src/lib.rs
-
-			// --- TO USE WHEN _POC READY  --- //
-			// let (_, pot) = Self::pot();
-			// // transfer rewards
-			// T::Currency::transfer(&Self::account_id(), &winner_account, reward_per_winner, KeepAlive)?;
-			// Self::deposit_event(RawEvent::Winner(winner_account, reward_per_winner));
-
-			// // transfer fees
-			// let authorities = Self::authorities();
-			// authorities.for_each(|authoritiy| {
-			//    T::Currency::transfer(&Self::account_id(), &authoritiy, fee, KeepAlive)?;
-			//    Self::deposit_event(RawEvent::Fee(authoritiy, fee));
-			// })
-			// --- END --- //
-
+				let (_, pot) = Self::pot();
+				debug::info!("--- Pot after: {:?} $", pot);
+			}
 		}
 	}
 }
@@ -329,6 +285,19 @@ impl<T: Config> Module<T> {
 				.saturating_sub(T::Currency::minimum_balance());
 
 			(account_id, balance)
+	}
+
+	fn distribute_reward(reward_percentage: u8, winners: &[(Bet<T::AccountId>, u8)], pot_for_rewards: BalanceOf<T>, hits: u8) {
+		let rewards_from_pot = Percent::from_percent(reward_percentage) * pot_for_rewards;
+		let winners_count = winners.len() as u32;
+		let reward_per_winner: BalanceOf<T> = rewards_from_pot / winners_count.into(); // TODO: fixed point safe division
+
+		winners.iter().for_each(|winner| {
+			let winner_account = &winner.0.account_id;
+			debug::info!("Account {:?} won {:?} $ by guessing {:?} numbers!", winner_account, reward_per_winner, hits);
+			let _ = T::Currency::transfer(&Self::account_id(), &winner_account, reward_per_winner, KeepAlive);
+			Self::deposit_event(RawEvent::RewardForWinner(winner_account.clone(), reward_per_winner));
+		})
 	}
 
 	fn close_the_session() -> DispatchResult {
