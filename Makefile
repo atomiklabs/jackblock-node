@@ -89,7 +89,7 @@ public-boot-node-start:
 	--validator \
 	--rpc-cors $(PUBLIC_RPC_CORS) \
 	--rpc-methods Unsafe \
-	--no-mdns
+	--no-mdns \
 	--name jackblock-public-boot-node \
 
 public-node-start:
@@ -103,7 +103,7 @@ public-node-start:
 	--rpc-cors $(PUBLIC_RPC_CORS) \
 	--rpc-methods Unsafe \
 	--bootnodes $(BOOT_NODE_PREFIX)/$(BOOT_NODE_IDENTITY) \
-	--no-mdns
+	--no-mdns \
 	--name $(NAME) \
 
 public-node-add-keys:
