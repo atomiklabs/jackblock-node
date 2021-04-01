@@ -146,6 +146,7 @@ decl_event!(
 		{
 		NewBet(SessionIdType, Bet<AccountId>),
 		Winners(SessionIdType, Winners<AccountId>),
+		SessionResults(SessionIdType, GuessNumbersType, Winners<AccountId>),
 		RewardFeeForAuthority(AccountId, Balance),
 		RewardForWinner(AccountId, Balance),
 	}
@@ -175,6 +176,7 @@ decl_module! {
 
 			if let Some(session_id) = Self::closed_not_finalised_session() {
 				if let Err(error) = Self::generate_session_numbers_and_send(block_number, session_id) {
+					debug::RuntimeLogger::init();
 					debug::info!("--- offchain_worker error: {}", error);
 				}
 			}
@@ -222,6 +224,9 @@ decl_module! {
 			let session_bets = Bets::<T>::get(payload.session_id);
 			let winners = Self::get_winners(payload.session_numbers, session_bets);
 
+			Self::deposit_event(RawEvent::SessionResults(payload.session_id, payload.session_numbers, winners.clone()));
+
+			debug::RuntimeLogger::init();
 			debug::info!("--- Finalize_the_session: {}", payload.session_id);
 			debug::info!("--- Session_numbers: {:?}", payload.session_numbers);
 			debug::info!("--- Winners: {:?}", winners);
