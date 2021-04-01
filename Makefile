@@ -9,10 +9,7 @@ RPC_PORT_1?=9934
 BASE_PATH_PREFIX?=./tmp-public-chain
 KEYS_PATH_PREFIX?=keys
 TELEMETRY_URL?='wss://telemetry.polkadot.io/submit/ 0'
-NODE_KEY?=0000000000000000000000000000000000000000000000000000000000000001 # PRIVATE SEED FOR LOCAL NODE IDENTITY
-BOOT_NODE_IP?=127.0.0.1
 BOOT_NODE_PREFIX?=/ip4/$(BOOT_NODE_IP)/tcp/$(PORT_0)/p2p
-BOOT_NODES?=$(BOOT_NODE_PREFIX)/12D3KooWEyoppNCUx8Yx66oV9fJnriXwCcXwDDUA2kj6vnc6iDEp
 
 PUBLIC_CHAIN_SPEC?=./publicChainSpecRaw.json
 PUBLIC_RPC_CORS?=all
@@ -30,11 +27,10 @@ local-node-0-start:
 	--port $(PORT_0) \
 	--ws-port $(WS_PORT_0) \
 	--rpc-port $(RPC_PORT_0) \
-	--node-key $(NODE_KEY) \
 	--validator \
 	--rpc-methods Unsafe \
 	--telemetry-url $(TELEMETRY_URL) \
-	--name jackblock-node-0
+	--name jackblock-node-0 \
 
 local-node-1-start:
 	./target/release/node-template -lruntime=debug \
@@ -46,8 +42,7 @@ local-node-1-start:
 	--validator \
 	--rpc-methods Unsafe \
 	--telemetry-url $(TELEMETRY_URL) \
-	--bootnodes $(BOOT_NODES) \
-	--name jackblock-node-1
+	--name jackblock-node-1 \
 
 local-add-all-keys:
 	make local-node-0-add-key-aura && \
