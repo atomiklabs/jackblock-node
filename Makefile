@@ -14,6 +14,26 @@ BOOT_NODE_PREFIX?=/ip4/$(BOOT_NODE_IP)/tcp/$(PORT_0)/p2p
 PUBLIC_CHAIN_SPEC?=./publicChainSpecRaw.json
 PUBLIC_RPC_CORS?=all
 
+run:
+	cargo run -- --dev --tmp
+
+purge:
+	cargo run -- purge-chain --dev -y
+
+restart: purge run
+
+check:
+	SKIP_WASM_BUILD=1 cargo check
+
+test:
+	SKIP_WASM_BUILD=1 cargo test --all
+
+test-lib:
+	SKIP_WASM_BUILD=1 cargo test -p pallet-jackblock --lib
+
+build:
+	cargo build
+
 start:
 	cargo run --release -- --dev --tmp
 
