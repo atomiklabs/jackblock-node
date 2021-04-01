@@ -239,7 +239,7 @@ decl_module! {
 				debug::info!("--- Pot for rewards: {:?} $", pot_for_rewards);
 
 				for authoritiy in authorities {
-					debug::info!("--- Reward for authoricity: {:?}, {:?} $", authoritiy, reward_fee_per_authority);
+					debug::info!("--- Reward for authority: {:?}, {:?} $", authoritiy, reward_fee_per_authority);
 					T::Currency::transfer(&Self::account_id(), &authoritiy, reward_fee_per_authority, KeepAlive)?;
 					Self::deposit_event(RawEvent::RewardFeeForAuthority(authoritiy, reward_fee_per_authority));
 				};
@@ -295,7 +295,7 @@ impl<T: Config> Module<T> {
 		winners.iter().for_each(|winner| {
 			let winner_account = &winner.0.account_id;
 			debug::info!("Account {:?} won {:?} $ by guessing {:?} numbers!", winner_account, reward_per_winner, hits);
-			let _ = T::Currency::transfer(&Self::account_id(), &winner_account, reward_per_winner, KeepAlive);
+			let _ = T::Currency::transfer(&Self::account_id(), &winner_account, reward_per_winner, KeepAlive); // TODO: handle erorr
 			Self::deposit_event(RawEvent::RewardForWinner(winner_account.clone(), reward_per_winner));
 		})
 	}
@@ -375,11 +375,11 @@ impl<T: Config> Module<T> {
 			let next_session_number = Self::get_random_number();
 			if !session_numbers.contains(&next_session_number) {
 				session_numbers[i] = next_session_number;
-					i += 1;
+				i += 1;
 			}
 
 			if i == GUESS_NUMBERS_COUNT {
-					break;
+				break;
 			}
 		}
 
