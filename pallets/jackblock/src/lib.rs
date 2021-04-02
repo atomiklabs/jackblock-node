@@ -11,6 +11,8 @@ use frame_support::{
 	},
 	traits::{
 		Vec,
+		Currency,
+		ExistenceRequirement::KeepAlive,
 	},
 	dispatch::{
 		DispatchError,
@@ -34,10 +36,13 @@ use frame_system::{
 	},
 };
 use sp_runtime::{
+	ModuleId,
 	RandomNumberGenerator,
 	traits::{
 		BlakeTwo256,
 		IdentifyAccount,
+		AccountIdConversion,
+		Saturating,
 	},
 	RuntimeDebug,
 	transaction_validity::{
@@ -55,12 +60,16 @@ use sp_core::{
 		KeyTypeId,
 	},
 };
+use sp_arithmetic::Percent;
 
 #[cfg(test)]
 mod mock;
 
 #[cfg(test)]
 mod tests;
+
+mod group_by;
+pub use group_by::{GroupByTrait};
 
 pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"jack");
 
@@ -83,16 +92,19 @@ pub trait Config: frame_system::Config + CreateSignedTransaction<Call<Self>> {
 	type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
 	type AuthorityId: AppCrypto<Self::Public, Self::Signature>;
 	type Call: From<Call<Self>>;
+	type Currency: Currency<Self::AccountId>;
 }
+type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
+const BET_PRICE: u32 = 1000000000; // TODO: u128
 const SESSION_IN_BLOCKS: u8 = 5;
 const MIN_GUESS_NUMBER: u32 = 1;
-const MAX_GUESS_NUMBER: u32 = 49;
+const MAX_GUESS_NUMBER: u32 = 10;
 const GUESS_NUMBERS_COUNT: usize = 6;
 const UNSIGNED_TX_PRIORITY: u64 = 100;
+const PALLET_ID: ModuleId = ModuleId(*b"JackPot!");
 
 type SessionIdType = u128;
-type BetType = u32;
 type GuessNumbersType = [u8; GUESS_NUMBERS_COUNT];
 type Winners<AccountId> = Vec<(Bet<AccountId>, u8)>;
 
@@ -100,7 +112,6 @@ type Winners<AccountId> = Vec<(Bet<AccountId>, u8)>;
 pub struct Bet<AccountId> {
 	account_id: AccountId,
 	guess_numbers: GuessNumbersType,
-	bet: BetType,
 }
 
 #[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
@@ -124,13 +135,20 @@ decl_storage! {
 		Bets get(fn bets): map hasher(blake2_128_concat) SessionIdType => Vec<Bet<T::AccountId>>;
 		ClosedNotFinalisedSessionId get(fn closed_not_finalised_session): Option<SessionIdType>;
 		Authorities get(fn authorities) config(offchain_authorities): Vec<T::AccountId>;
+
 	}
 }
 
 decl_event!(
-	pub enum Event<T> where AccountId = <T as frame_system::Config>::AccountId {
+	pub enum Event<T> where
+		AccountId = <T as frame_system::Config>::AccountId,
+		Balance = BalanceOf<T>,
+		{
 		NewBet(SessionIdType, Bet<AccountId>),
 		Winners(SessionIdType, Winners<AccountId>),
+		SessionResults(SessionIdType, GuessNumbersType, Winners<AccountId>),
+		RewardFeeForAuthority(AccountId, Balance),
+		RewardForWinner(AccountId, Balance),
 	}
 );
 
@@ -158,23 +176,29 @@ decl_module! {
 
 			if let Some(session_id) = Self::closed_not_finalised_session() {
 				if let Err(error) = Self::generate_session_numbers_and_send(block_number, session_id) {
+					debug::RuntimeLogger::init();
 					debug::info!("--- offchain_worker error: {}", error);
 				}
 			}
 		}
 
 		#[weight = 10_000]
-		pub fn add_new_bet(origin, guess_numbers: GuessNumbersType, bet: BetType) {
+		pub fn add_new_bet(origin, guess_numbers: GuessNumbersType) {
 			let account_id = ensure_signed(origin)?;
 			let session_id = SessionId::get();
 
 			let new_bet = Bet {
-				account_id,
+				account_id: account_id.clone(),
 				guess_numbers,
-				bet,
 			};
 
-			Bets::<T>::mutate(session_id, |bets| bets.push(new_bet.clone()));
+			let bet_price: BalanceOf<T> = BET_PRICE.into(); // TODO: impl _u128.into()
+
+			Bets::<T>::try_mutate(session_id, |bets| -> DispatchResult {
+				T::Currency::transfer(&account_id, &Self::account_id(), bet_price, KeepAlive)?;
+				bets.push(new_bet.clone());
+				Ok(())
+			})?;
 
 			Self::deposit_event(RawEvent::NewBet(session_id, new_bet));
 		}
@@ -199,15 +223,88 @@ decl_module! {
 
 			let session_bets = Bets::<T>::get(payload.session_id);
 			let winners = Self::get_winners(payload.session_numbers, session_bets);
-			
-			debug::info!("--- finalize_the_session: {}", payload.session_id);
-			debug::info!("--- session_numbers: {:?}", payload.session_numbers);
-			debug::info!("--- winners: {:?}", winners);
+
+			Self::deposit_event(RawEvent::SessionResults(payload.session_id, payload.session_numbers, winners.clone()));
+
+			debug::RuntimeLogger::init();
+			debug::info!("--- Finalize_the_session: {}", payload.session_id);
+			debug::info!("--- Session_numbers: {:?}", payload.session_numbers);
+			debug::info!("--- Winners: {:?}", winners);
+
+			if winners.len() > 0 {
+				let (_, pot) = Self::pot();
+				let fees = Percent::from_percent(10) * pot;
+				let pot_for_rewards = pot.saturating_sub(fees);
+				let authorities = Self::authorities();
+				let authorities_count = authorities.len() as u32;
+				let reward_fee_per_authority: BalanceOf<T> = fees / authorities_count.into(); // TODO: fixed point safe division
+
+				debug::info!("--- Pot before: {:?}", pot);
+				debug::info!("--- Pot for fees: {:?} $", fees);
+				debug::info!("--- Pot for rewards: {:?} $", pot_for_rewards);
+
+				for authoritiy in authorities {
+					debug::info!("--- Reward for authority: {:?}, {:?} $", authoritiy, reward_fee_per_authority);
+					T::Currency::transfer(&Self::account_id(), &authoritiy, reward_fee_per_authority, KeepAlive)?;
+					Self::deposit_event(RawEvent::RewardFeeForAuthority(authoritiy, reward_fee_per_authority));
+				};
+
+				let winners_to_reward: Winners<T::AccountId> = winners.into_iter().filter(|&(_, hits) | hits >= 3).collect();
+				let winners_grouped_by_hits = winners_to_reward.group_by(|(_, a_hits), (_, b_hits)| a_hits == b_hits);
+
+				winners_grouped_by_hits.for_each(|winners| {
+					let hits = winners[0].1;
+
+					match hits {
+						3 => {
+							Self::distribute_reward(3, winners, pot_for_rewards, hits);
+						},
+						4 => {
+							Self::distribute_reward(7, winners, pot_for_rewards, hits);
+						},
+						5 => {
+							Self::distribute_reward(15, winners, pot_for_rewards, hits);
+						},
+						6 => {
+							Self::distribute_reward(75, winners, pot_for_rewards, hits);
+						},
+						_ => debug::info!("Error distribute_reward"), // TODO: handle Error
+					}
+				});
+
+				let (_, pot) = Self::pot();
+				debug::info!("--- Pot after: {:?} $", pot);
+			}
 		}
 	}
 }
 
 impl<T: Config> Module<T> {
+	pub fn account_id() -> T::AccountId {
+		PALLET_ID.into_account()
+	}
+
+	fn pot() -> (T::AccountId, BalanceOf<T>) {
+			let account_id = Self::account_id();
+			let balance = T::Currency::free_balance(&account_id)
+				.saturating_sub(T::Currency::minimum_balance());
+
+			(account_id, balance)
+	}
+
+	fn distribute_reward(reward_percentage: u8, winners: &[(Bet<T::AccountId>, u8)], pot_for_rewards: BalanceOf<T>, hits: u8) {
+		let rewards_from_pot = Percent::from_percent(reward_percentage) * pot_for_rewards;
+		let winners_count = winners.len() as u32;
+		let reward_per_winner: BalanceOf<T> = rewards_from_pot / winners_count.into(); // TODO: fixed point safe division
+
+		winners.iter().for_each(|winner| {
+			let winner_account = &winner.0.account_id;
+			debug::info!("Account {:?} won {:?} $ by guessing {:?} numbers!", winner_account, reward_per_winner, hits);
+			let _ = T::Currency::transfer(&Self::account_id(), &winner_account, reward_per_winner, KeepAlive); // TODO: handle erorr
+			Self::deposit_event(RawEvent::RewardForWinner(winner_account.clone(), reward_per_winner));
+		})
+	}
+
 	fn close_the_session() -> DispatchResult {
 		let session_id = Self::next_session_id()?;
 		ClosedNotFinalisedSessionId::put(session_id);
@@ -220,7 +317,7 @@ impl<T: Config> Module<T> {
 				let correct = session_numbers.iter()
 					.filter(|n| bet.guess_numbers.contains(n))
 					.fold(0, |acc, _| acc + 1);
-			
+
 				(bet, correct)
 			})
 			.filter(|x| x.1 > 0)
@@ -283,11 +380,11 @@ impl<T: Config> Module<T> {
 			let next_session_number = Self::get_random_number();
 			if !session_numbers.contains(&next_session_number) {
 				session_numbers[i] = next_session_number;
-			    i += 1;
+				i += 1;
 			}
-			
+
 			if i == GUESS_NUMBERS_COUNT {
-			    break;
+				break;
 			}
 		}
 

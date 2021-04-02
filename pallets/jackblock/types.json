@@ -1,17 +1,16 @@
 {
     "Public": "AccountId",
     "SessionIdType": "u128",
-    "BetType": "u32",
     "GuessNumbersType": "[u8; 6]",
     "Bet": {
         "account_id": "AccountId",
-        "guess_numbers": "GuessNumbersType",
-        "bet": "BetType"
+        "guess_numbers": "GuessNumbersType"
     },
     "SessionNumbersPayload": {
         "public": "Public",
         "block_number": "BlockNumber",
         "session_id": "SessionIdType",
         "session_numbers": "GuessNumbersType"
-    }
+    },
+    "Winners": "Vec<(Bet, u8)>"
 }

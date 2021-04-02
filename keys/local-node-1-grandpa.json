@@ -1,0 +1,10 @@
+{
+  "jsonrpc":"2.0",
+  "id":1,
+  "method":"author_insertKey",
+  "params": [
+    "gran",
+    "arrow hockey kid window adapt daughter below arch mule flight citizen kick",
+    "0xd673017b1fe89ae315440ef77fbe126a5c73dfef550e51621cf464e9d4f2f77e"
+  ]
+}
