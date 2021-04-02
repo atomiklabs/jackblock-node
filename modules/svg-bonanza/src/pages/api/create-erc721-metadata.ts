@@ -3,12 +3,22 @@ import * as fs from 'fs/promises';
 import { NextApiRequest, NextApiResponse } from 'next';
 import { NFTStorage, Blob } from 'nft.storage';
 
-export default async function generateNftReward(
+export default async function createERC721Metadata(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  const { reward, score, scoreOutOf, sessionId = 'skibidibiba' } = (req.body ||
+  const { reward, score, scoreOutOf, sessionId } = (req.body ||
     {}) as Partial<GenerateSvgMarkupProps>;
+
+  const isInputValid = [reward, score, scoreOutOf].every(
+    x => typeof x === 'number' && x > 0
+  ) && typeof sessionId === 'string' && sessionId.length > 0;
+
+  if (isInputValid === false) {
+    res.status(400).json({ message: 'Invalid input '});
+
+    return;
+  }
 
   const svgMarkup = await generateSvgMarkup({
     reward,
