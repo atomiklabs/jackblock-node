@@ -15,6 +15,9 @@ use frame_support::{
 	dispatch::{
 		DispatchError,
 		DispatchResult,
+		fmt::{
+			Debug,
+		},
 	},
 	debug,
 	unsigned::{
@@ -79,10 +82,17 @@ pub mod crypto {
 	}
 }
 
+pub trait AuraAuthorities {
+	type AuthorityId: Debug;
+
+	fn authorities() -> Vec<Self::AuthorityId>;
+}
+
 pub trait Config: frame_system::Config + CreateSignedTransaction<Call<Self>> {
 	type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
 	type AuthorityId: AppCrypto<Self::Public, Self::Signature>;
 	type Call: From<Call<Self>>;
+	type AuraAuthoritiesType: AuraAuthorities;
 }
 
 const SESSION_IN_BLOCKS: u8 = 5;
@@ -149,6 +159,12 @@ decl_module! {
 		fn deposit_event() = default;
 
 		fn on_finalize(block_number: T::BlockNumber) {
+
+			let x = T::AuraAuthoritiesType::authorities();
+			debug::RuntimeLogger::init();
+			debug::info!("--- authorities: {:?}", x);
+
+
 			if block_number % SessionLength::<T>::get() == T::BlockNumber::from(0u8) {
 				let _ = Self::close_the_session();
 			}
