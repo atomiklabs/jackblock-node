@@ -265,22 +265,21 @@ impl pallet_sudo::Config for Runtime {
 	type Call = Call;
 }
 
-pub struct AuraAuthoritiesStruct;
+pub struct AuraAuthorities;
 
-impl pallet_jackblock::AuraAuthorities for AuraAuthoritiesStruct {
+impl pallet_jackblock::Authorities for AuraAuthorities {
 	type AuthorityId = AuraId;
 
-	fn authorities() -> Vec<Self::AuthorityId> {
+	fn get() -> Vec<Self::AuthorityId> {
 		Aura::authorities()
 	}
 }
 
 impl pallet_jackblock::Config for Runtime {
 	type Event = Event;
-	type AuthorityId = pallet_jackblock::crypto::TestAuthId;
 	type Call = Call;
 
-	type AuraAuthoritiesType = AuraAuthoritiesStruct;
+	type Authorities = AuraAuthorities;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.

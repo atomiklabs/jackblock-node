@@ -53,11 +53,6 @@ use sp_runtime::{
 use sp_io::{
 	offchain,
 };
-use sp_core::{
-	crypto::{
-		KeyTypeId,
-	},
-};
 
 #[cfg(test)]
 mod mock;
@@ -65,34 +60,16 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"jack");
+pub trait Authorities<AppCryptoPublic, AppCryptoSignature> {
+	type AuthorityId: Debug + AppCrypto<AppCryptoPublic, AppCryptoSignature>;
 
-pub mod crypto {
-	use super::KEY_TYPE;
-	use sp_runtime::{app_crypto::{app_crypto, sr25519}, MultiSigner, MultiSignature};
-
-	app_crypto!(sr25519, KEY_TYPE);
-
-	pub struct TestAuthId;
-
-	impl frame_system::offchain::AppCrypto<MultiSigner, MultiSignature> for TestAuthId {
-		type RuntimeAppPublic = Public;
-		type GenericSignature = sp_core::sr25519::Signature;
-		type GenericPublic = sp_core::sr25519::Public;
-	}
-}
-
-pub trait AuraAuthorities {
-	type AuthorityId: Debug;
-
-	fn authorities() -> Vec<Self::AuthorityId>;
+	fn get() -> Vec<Self::AuthorityId>;
 }
 
 pub trait Config: frame_system::Config + CreateSignedTransaction<Call<Self>> {
 	type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
-	type AuthorityId: AppCrypto<Self::Public, Self::Signature>;
 	type Call: From<Call<Self>>;
-	type AuraAuthoritiesType: AuraAuthorities;
+	type Authorities: Authorities<Self::Public, Self::Signature>;
 }
 
 const SESSION_IN_BLOCKS: u8 = 5;
@@ -133,7 +110,6 @@ decl_storage! {
 		SessionLength: T::BlockNumber = T::BlockNumber::from(SESSION_IN_BLOCKS);
 		Bets get(fn bets): map hasher(blake2_128_concat) SessionIdType => Vec<Bet<T::AccountId>>;
 		ClosedNotFinalisedSessionId get(fn closed_not_finalised_session): Option<SessionIdType>;
-		Authorities get(fn authorities) config(offchain_authorities): Vec<T::AccountId>;
 	}
 }
 
@@ -159,11 +135,9 @@ decl_module! {
 		fn deposit_event() = default;
 
 		fn on_finalize(block_number: T::BlockNumber) {
-
-			let x = T::AuraAuthoritiesType::authorities();
+			let authorities = T::Authorities::get();
 			debug::RuntimeLogger::init();
-			debug::info!("--- authorities: {:?}", x);
-
+ 			debug::info!("--- authorities: {:?}", authorities));
 
 			if block_number % SessionLength::<T>::get() == T::BlockNumber::from(0u8) {
 				let _ = Self::close_the_session();
@@ -257,7 +231,7 @@ impl<T: Config> Module<T> {
 	}
 
 	fn is_authority_account(account_id: &T::AccountId) -> bool {
-		Self::authorities().contains(account_id)
+		T::Authorities::get().contains(account_id)
 	}
 
 	#[cfg(test)]
@@ -272,7 +246,7 @@ impl<T: Config> Module<T> {
 	fn generate_session_numbers_and_send(block_number: T::BlockNumber, session_id: SessionIdType) -> Result<(), &'static str> {
 		let session_numbers = Self::get_session_numbers();
 
-		let (_account, result) = Signer::<T, T::AuthorityId>::any_account().send_unsigned_transaction(
+		let (_account, result) = Signer::<T, T::Authorities::AuthorityId>::any_account().send_unsigned_transaction(
 			|account| SessionNumbersPayload {
 				public: account.public.clone(),
 				block_number,
@@ -322,7 +296,7 @@ impl<T: Config> ValidateUnsigned for Module<T> {
 	fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {
 		match call {
 			Call::finalize_the_session(ref payload, ref signature) => {
-				let valid_signature = SignedPayload::<T>::verify::<T::AuthorityId>(payload, signature.clone());
+				let valid_signature = SignedPayload::<T>::verify::<T::Authorities::AuthorityId>(payload, signature.clone());
 				if !valid_signature {
 					return InvalidTransaction::BadProof.into();
 				}
