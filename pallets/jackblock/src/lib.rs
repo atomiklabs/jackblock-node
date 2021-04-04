@@ -102,7 +102,7 @@ const MIN_GUESS_NUMBER: u32 = 1;
 const MAX_GUESS_NUMBER: u32 = 10;
 const GUESS_NUMBERS_COUNT: usize = 6;
 const UNSIGNED_TX_PRIORITY: u64 = 100;
-const PALLET_ID: ModuleId = ModuleId(*b"JackPot!"); // 5EYCAe5b71oc992GHYBjkkKJ4oEY7LiZuQUkN7Czcru7ggzs
+const PALLET_ID: ModuleId = ModuleId(*b"JackPot!");
 
 type SessionIdType = u128;
 type GuessNumbersType = [u8; GUESS_NUMBERS_COUNT];
@@ -276,7 +276,7 @@ decl_module! {
 				debug::info!("--- Pot after: {:?} $", pot);
 			}
 		}
- 	}
+	}
 }
 
 impl<T: Config> Module<T> {

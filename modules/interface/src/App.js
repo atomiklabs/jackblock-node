@@ -6,17 +6,11 @@ import { SubstrateContextProvider, useSubstrate } from './substrate-lib';
 import { DeveloperConsole } from './substrate-lib/components';
 
 import AccountSelector from './AccountSelector';
-import Balances from './Balances';
 import BlockNumber from './BlockNumber';
+import Bets from './Bets';
 import Events from './Events';
-import Interactor from './Interactor';
-import Metadata from './Metadata';
-import NodeInfo from './NodeInfo';
-import TemplateModule from './TemplateModule';
-import Transfer from './Transfer';
-import Jack from './Jack';
-import JackBets from './JackBets';
-import JackEvents from './JackEvents';
+import SessionId from './SessionId';
+import PotBalance from './PotBalance';
 
 function Main () {
   const [accountAddress, setAccountAddress] = useState(null);
@@ -58,29 +52,15 @@ function Main () {
       <Container>
         <Grid stackable columns='equal'>
           <Grid.Row stretched>
-            <NodeInfo />
-            <Metadata />
+            <PotBalance />
+            <SessionId />
             <BlockNumber />
             <BlockNumber finalized />
           </Grid.Row>
           <Grid.Row>
-            <Jack accountPair={accountPair} />
-            <JackBets />
-            <JackEvents />
-          </Grid.Row>
-          {/* <Grid.Row stretched>
-            <Balances />
-          </Grid.Row>
-          <Grid.Row>
-            <Transfer accountPair={accountPair} />
-          </Grid.Row>
-          <Grid.Row>
-            <Interactor accountPair={accountPair} />
+            <Bets accountPair={accountPair} />
             <Events />
           </Grid.Row>
-          <Grid.Row>
-            <TemplateModule accountPair={accountPair} />
-          </Grid.Row> */}
         </Grid>
       </Container>
       <DeveloperConsole />
