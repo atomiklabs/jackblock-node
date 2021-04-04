@@ -82,17 +82,18 @@ pub mod crypto {
 	}
 }
 
-pub trait AuraAuthorities {
-	type AuthorityId: Debug;
+pub trait Authorities<Public, Signature> {
+	type AuthorityId: Debug + PartialEq + AppCrypto<Public, Signature>;
 
-	fn authorities() -> Vec<Self::AuthorityId>;
+	fn get() -> Vec<Self::AuthorityId>;
 }
 
 pub trait Config: frame_system::Config + CreateSignedTransaction<Call<Self>> {
 	type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
 	type AuthorityId: AppCrypto<Self::Public, Self::Signature>;
 	type Call: From<Call<Self>>;
-	type AuraAuthoritiesType: AuraAuthorities;
+
+	type Authorities: Authorities<Self::Public, Self::Signature>;
 }
 
 const SESSION_IN_BLOCKS: u8 = 5;
@@ -133,7 +134,6 @@ decl_storage! {
 		SessionLength: T::BlockNumber = T::BlockNumber::from(SESSION_IN_BLOCKS);
 		Bets get(fn bets): map hasher(blake2_128_concat) SessionIdType => Vec<Bet<T::AccountId>>;
 		ClosedNotFinalisedSessionId get(fn closed_not_finalised_session): Option<SessionIdType>;
-		Authorities get(fn authorities) config(offchain_authorities): Vec<T::AccountId>;
 	}
 }
 
@@ -160,7 +160,7 @@ decl_module! {
 
 		fn on_finalize(block_number: T::BlockNumber) {
 
-			let x = T::AuraAuthoritiesType::authorities();
+			let x = T::Authorities::get();
 			debug::RuntimeLogger::init();
 			debug::info!("--- authorities: {:?}", x);
 
@@ -256,8 +256,29 @@ impl<T: Config> Module<T> {
 		Ok(session_id)
 	}
 
-	fn is_authority_account(account_id: &T::AccountId) -> bool {
-		Self::authorities().contains(account_id)
+	
+	fn is_authority_account(account_id: T::Public) -> bool {
+	// fn is_authority_account(account_id: <T::Authorities as Authorities<T::Public, T::Signature>>::AuthorityId) -> bool {
+
+		let x = T::Authorities::get()[0];
+		// let y = crypto::Public::from(x.into());
+
+		// let crypto_account_id = crypto::Public::from(account_id.into());
+
+		// y == crypto_account_id
+
+		let z = <T::Authorities as Authorities<T::Public, T::Signature>>::AuthorityId::from(account_id.into());
+
+		// let authorities_crypto = T::Authorities::get()
+		// 	.into_iter()
+		// 	.map(|authority_id| {
+		// 		let x = crypto::Public::from(authority_id.into());
+		// 		x
+		// 	})
+		// 	.collect::<Vec<crypto::Public>>();
+
+		// 	authorities_crypto
+		// 		.contains(&(crypto::Public::from(account_id.into())))
 	}
 
 	#[cfg(test)]
@@ -327,8 +348,8 @@ impl<T: Config> ValidateUnsigned for Module<T> {
 					return InvalidTransaction::BadProof.into();
 				}
 
-				let account_id = payload.public.clone().into_account();
-				if !Self::is_authority_account(&account_id) {
+				let account_id = payload.public.clone();
+				if !Self::is_authority_account(account_id) {
 					return InvalidTransaction::BadProof.into();
 				}
 
