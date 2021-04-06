@@ -34,8 +34,11 @@ export default async function createERC721Metadata(
     new Blob([svgMarkup]),
   );
   const metadata = createMetadata(nftCid);
+  const metadataCid = await client.storeBlob(
+    new Blob([JSON.stringify(metadata)]),
+  );
 
-  res.status(200).json({ metadata });
+  res.status(200).json({ metadataCid });
 }
 
 interface GenerateSvgMarkupProps {
