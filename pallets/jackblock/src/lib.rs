@@ -109,6 +109,15 @@ type GuessNumbersType = [u8; GUESS_NUMBERS_COUNT];
 type Winners<AccountId> = Vec<(Bet<AccountId>, u8)>;
 
 #[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
+pub struct NFTRequestData<AccountId, Balance> {
+	winner_account: AccountId,
+	reward: Balance,
+	score: u8,
+	score_out_of: u8,
+	session_id: SessionIdType,
+}
+
+#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
 pub struct Bet<AccountId> {
 	account_id: AccountId,
 	guess_numbers: GuessNumbersType,
@@ -134,8 +143,9 @@ decl_storage! {
 		SessionLength: T::BlockNumber = T::BlockNumber::from(SESSION_IN_BLOCKS);
 		Bets get(fn bets): map hasher(blake2_128_concat) SessionIdType => Vec<Bet<T::AccountId>>;
 		ClosedNotFinalisedSessionId get(fn closed_not_finalised_session): Option<SessionIdType>;
-		Authorities get(fn authorities) config(offchain_authorities): Vec<T::AccountId>;
+		PendingWinnersNFT get(fn pending_winners_nft): Vec<NFTRequestData<T::AccountId, BalanceOf<T>>>;
 
+		Authorities get(fn authorities) config(offchain_authorities): Vec<T::AccountId>;
 	}
 }
 
@@ -257,16 +267,16 @@ decl_module! {
 
 					match hits {
 						3 => {
-							Self::distribute_reward(3, winners, pot_for_rewards, hits);
+							Self::distribute_reward(3, payload.session_id, winners, pot_for_rewards, hits);
 						},
 						4 => {
-							Self::distribute_reward(7, winners, pot_for_rewards, hits);
+							Self::distribute_reward(7, payload.session_id, winners, pot_for_rewards, hits);
 						},
 						5 => {
-							Self::distribute_reward(15, winners, pot_for_rewards, hits);
+							Self::distribute_reward(15, payload.session_id, winners, pot_for_rewards, hits);
 						},
 						6 => {
-							Self::distribute_reward(75, winners, pot_for_rewards, hits);
+							Self::distribute_reward(75, payload.session_id, winners, pot_for_rewards, hits);
 						},
 						_ => debug::info!("Error distribute_reward"), // TODO: handle Error
 					}
@@ -292,7 +302,7 @@ impl<T: Config> Module<T> {
 			(account_id, balance)
 	}
 
-	fn distribute_reward(reward_percentage: u8, winners: &[(Bet<T::AccountId>, u8)], pot_for_rewards: BalanceOf<T>, hits: u8) {
+	fn distribute_reward(reward_percentage: u8, session_id: SessionIdType, winners: &[(Bet<T::AccountId>, u8)], pot_for_rewards: BalanceOf<T>, hits: u8) {
 		let rewards_from_pot = Percent::from_percent(reward_percentage) * pot_for_rewards;
 		let winners_count = winners.len() as u32;
 		let reward_per_winner: BalanceOf<T> = rewards_from_pot / winners_count.into(); // TODO: fixed point safe division
@@ -300,7 +310,20 @@ impl<T: Config> Module<T> {
 		winners.iter().for_each(|winner| {
 			let winner_account = &winner.0.account_id;
 			debug::info!("Account {:?} won {:?} $ by guessing {:?} numbers!", winner_account, reward_per_winner, hits);
-			let _ = T::Currency::transfer(&Self::account_id(), &winner_account, reward_per_winner, KeepAlive); // TODO: handle erorr
+			let _ = T::Currency::transfer(&Self::account_id(), winner_account, reward_per_winner, KeepAlive); // TODO: handle erorr
+
+			PendingWinnersNFT::<T>::mutate(|pending_winners_nft| {
+				let nft_request_data = NFTRequestData {
+					winner_account: winner_account.clone(),
+					reward: reward_per_winner,
+					score: hits,
+					score_out_of: GUESS_NUMBERS_COUNT as u8,
+					session_id,
+				};
+
+				pending_winners_nft.push(nft_request_data);
+			});
+
 			Self::deposit_event(RawEvent::RewardForWinner(winner_account.clone(), reward_per_winner));
 		})
 	}

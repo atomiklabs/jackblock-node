@@ -12,5 +12,12 @@
         "session_id": "SessionIdType",
         "session_numbers": "GuessNumbersType"
     },
-    "Winners": "Vec<(Bet, u8)>"
+    "Winners": "Vec<(Bet, u8)>",
+    "NFTRequestData": {
+        "winner_account": "AccountId",
+        "reward": "Balance",
+        "score": "u8",
+        "score_out_of": "u8",
+        "session_id": "SessionIdType"
+    }
 }
