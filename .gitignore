@@ -16,3 +16,5 @@
 publicChainSpecRaw.json
 /keys/private-key-aura.json
 /keys/private-key-grandpa.json
+
+.env

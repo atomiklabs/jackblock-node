@@ -1,21 +1,13 @@
-version: "3.2"
-
+version: '3'
 services:
-  dev:
-    container_name: node-template
-    image: paritytech/ci-linux:922123e4-20210324
-    working_dir: /var/www/node-template
+  jackblock-node:
     ports:
-      - "9944:9944"
-    environment:
-      - CARGO_HOME=/var/www/node-template/.cargo
+      - "127.0.0.1:30333:30333/tcp"
+      - "127.0.0.1:9933:9933/tcp"
+    image: tkodckr/jackblock-node:latest
     volumes:
-      - .:/var/www/node-template
-      - type: bind
-        source: ./.local
-        target: /root/.local
-    command: bash -c "cargo build --release && ./target/release/node-template --dev --ws-external"
-  devix:
-    container_name: jakcblock
-    image: tkodckr/jack-block:latest
-    command: bash -c "/opt/jackblock-node --dev --ws-external"
+      - "data:/data"
+    command: node-template
+
+volumes:
+  data:
