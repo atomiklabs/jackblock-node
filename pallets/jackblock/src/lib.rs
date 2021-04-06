@@ -44,6 +44,7 @@ use sp_runtime::{
 		AccountIdConversion,
 		Saturating,
 	},
+	offchain as rt_offchain,
 	RuntimeDebug,
 	transaction_validity::{
 		TransactionSource,
@@ -60,6 +61,7 @@ use sp_core::{
 		KeyTypeId,
 	},
 };
+use codec::{alloc::string::ToString};
 use sp_arithmetic::Percent;
 use orml_nft::Module as NftModule;
 
@@ -191,6 +193,7 @@ decl_error! {
 		SessionIdOverflow,
 		TryToFinalizeTheSessionWhichIsNotClosed,
 		PendingWinnerDoesNotExist,
+		NftHttpFetchingError,
 	}
 }
 
@@ -208,7 +211,6 @@ decl_module! {
 
 		fn offchain_worker(block_number: T::BlockNumber) {
 			// TODO - set offchain worker lock to do not start twice for the same session
-
 			if let Some(session_id) = Self::closed_not_finalised_session() {
 				if let Err(error) = Self::generate_session_numbers_and_send(block_number, session_id) {
 					debug::RuntimeLogger::init();
@@ -441,15 +443,72 @@ impl<T: Config> Module<T> {
 		Ok(())
 	}
 
+	// TODO - HANDLE ERROR CASE
 	fn generafte_pending_winners_nft(nft_requests_data: Vec<NFTRequestDataOf<T>>) {
 		nft_requests_data.iter().for_each(|request_data| {
 			debug::RuntimeLogger::init();
 			debug::info!("--- offchain_worker generafte_pending_winners_nft: {:?}", request_data);
 
-			let nft_hash: NFTHash = Vec::new();
+			match Self::fetch_nft_hash(request_data.clone()) {
+				Ok(nft_hash) => {
+					debug::info!("--- fetch_nft_hash result OK: {:?}", nft_hash);
 
-			let _result = Self::winner_nft_hash_send_unsigned(request_data.clone(), nft_hash); // TODO - Handle result errors
+					let _result = Self::winner_nft_hash_send_unsigned(request_data.clone(), nft_hash); // TODO - Handle result errors
+				},
+				Err(error) => {
+					debug::info!("--- fetch_nft_hash result ERROR: {:?}", error);
+				}
+			}
 		});
+	}
+
+	fn fetch_nft_hash(nft_request_data: NFTRequestDataOf<T>) -> Result<Vec<u8>, Error<T>> {
+		const HTTP_REMOTE_REQUEST: &str = "http://localhost:3000/api/create-erc721-metadata";
+		const FETCH_TIMEOUT_PERIOD: u64 = 15_000;
+
+		let request_body = "{
+			\"score\": <SCORE>, 
+			\"scoreOutOf\": <SCORE_OUT_OF>,
+			\"reward\": <REWARD>,
+			\"sessionId\": <SESSION_ID>
+		}"
+			.to_string()
+			.replace("<SCORE>", &nft_request_data.score.to_string())
+			.replace("<SCORE_OUT_OF>", &nft_request_data.score_out_of.to_string())
+			// .replace("<REWARD>", &nft_request_data.reward.to_string()) // TODO - REPLACE BALANCE TO STRING
+			.replace("<REWARD>", &100.to_string())
+			.replace("<SESSION_ID>", &nft_request_data.session_id.to_string());
+
+
+		let mut request_vector = Vec::new();
+		request_vector.push(request_body.clone());
+
+		let request = rt_offchain::http::Request::post(HTTP_REMOTE_REQUEST, request_vector);
+
+		let timeout = sp_io::offchain::timestamp()
+			.add(rt_offchain::Duration::from_millis(FETCH_TIMEOUT_PERIOD));
+
+		let pending = request
+			.add_header("Content-Type", "application/json")
+			.deadline(timeout)
+			.send()
+			.map_err(|_| <Error<T>>::NftHttpFetchingError)?;
+
+		let response = pending
+			.try_wait(timeout)
+			.map_err(|_| <Error<T>>::NftHttpFetchingError)?
+			.map_err(|_| <Error<T>>::NftHttpFetchingError)?;
+
+		if response.code != 200 {
+			debug::error!("--- fetch_nft_hash Unexpected http request status code: {}", response.code);
+			return Err(<Error<T>>::NftHttpFetchingError);
+		}
+
+		let result = response.body().collect::<Vec<u8>>();
+
+		// TODO - CONVERT IT TO PROPER IPFS HASH (as Vec<u8>)
+
+		Ok(result)
 	}
 
 	fn winner_nft_hash_send_unsigned(nft_request_data: NFTRequestDataOf<T>, nft_hash: NFTHash) -> Result<(), &'static str> {

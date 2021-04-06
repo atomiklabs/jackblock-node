@@ -7,12 +7,14 @@ export default async function createERC721Metadata(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  console.log('--- req.body: ', req.body)
+  
   const { reward, score, scoreOutOf, sessionId } = (req.body ||
     {}) as Partial<GenerateSvgMarkupProps>;
 
   const isInputValid = [reward, score, scoreOutOf].every(
     x => typeof x === 'number' && x > 0
-  ) && typeof sessionId === 'string' && sessionId.length > 0;
+  );
 
   if (isInputValid === false) {
     res.status(400).json({ message: 'Invalid input '});
@@ -38,6 +40,7 @@ export default async function createERC721Metadata(
     new Blob([JSON.stringify(metadata)]),
   );
 
+  console.log('--- res.status: ', { metadataCid })
   res.status(200).json({ metadataCid });
 }
 
