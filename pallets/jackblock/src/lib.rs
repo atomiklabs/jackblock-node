@@ -403,10 +403,12 @@ impl<T: Config> ValidateUnsigned for Module<T> {
 					return InvalidTransaction::BadProof.into();
 				}
 
-				let account_id = payload.public.clone().into_account();
-				if !Self::is_authority_account(&account_id) {
-					return InvalidTransaction::BadProof.into();
-				}
+				// TODO - use aura keys to check authority
+
+				// let account_id = payload.public.clone().into_account();
+				// if !Self::is_authority_account(&account_id) {
+				// 	return InvalidTransaction::BadProof.into();
+				// }
 
 				return ValidTransaction::with_tag_prefix("JackBlock/validate_unsigned/finalize_the_session")
 					.priority(UNSIGNED_TX_PRIORITY)
