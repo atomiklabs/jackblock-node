@@ -61,6 +61,7 @@ use sp_core::{
 	},
 };
 use sp_arithmetic::Percent;
+use orml_nft::Module as NftModule;
 
 #[cfg(test)]
 mod mock;
@@ -88,7 +89,7 @@ pub mod crypto {
 	}
 }
 
-pub trait Config: frame_system::Config + CreateSignedTransaction<Call<Self>> {
+pub trait Config: frame_system::Config + CreateSignedTransaction<Call<Self>> + orml_nft::Config<TokenData = NFTHash, ClassData = ()> {
 	type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
 	type AuthorityId: AppCrypto<Self::Public, Self::Signature>;
 	type Call: From<Call<Self>>;
@@ -107,7 +108,7 @@ const PALLET_ID: ModuleId = ModuleId(*b"JackPot!");
 type SessionIdType = u128;
 type GuessNumbersType = [u8; GUESS_NUMBERS_COUNT];
 type Winners<AccountId> = Vec<(Bet<AccountId>, u8)>;
-type NFTHash = Vec<u8>;
+pub type NFTHash = Vec<u8>;
 
 
 #[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, PartialOrd, Ord)]
@@ -155,13 +156,20 @@ impl<T: SigningTypes> SignedPayload<T> for NftHashPayload<T::Public> {
 
 decl_storage! {
 	trait Store for Module<T: Config> as JackBlock {
+		ClassId get(fn class_id): T::ClassId;
 		SessionId get(fn session_id): SessionIdType;
 		SessionLength: T::BlockNumber = T::BlockNumber::from(SESSION_IN_BLOCKS);
 		Bets get(fn bets): map hasher(blake2_128_concat) SessionIdType => Vec<Bet<T::AccountId>>;
 		ClosedNotFinalisedSessionId get(fn closed_not_finalised_session): Option<SessionIdType>;
 		PendingWinnersNFT get(fn pending_winners_nft): Vec<NFTRequestDataOf<T>>;
-
 		Authorities get(fn authorities) config(offchain_authorities): Vec<T::AccountId>;
+	}
+
+	add_extra_genesis {
+		build(|_config| {
+			let class_id = NftModule::<T>::create_class(&Default::default(), Vec::new(), ()).expect("Cannot fail or invalid chain spec");
+			ClassId::<T>::put(class_id);
+		})
 	}
 }
 
@@ -244,16 +252,18 @@ decl_module! {
 
 			match pending_winners.binary_search(&nft_request_data) {
 				Ok(index) => {
+					let nft_token_id = NftModule::<T>::mint(&nft_request_data.winner_account, Self::class_id(), Vec::new(), payload.nft_hash.clone())?;
+
 					pending_winners.remove(index);
 					PendingWinnersNFT::<T>::put(pending_winners);
+
+					debug::RuntimeLogger::init();
+					debug::info!("--- add_nft_hash_to_winner: nft_token_id: {:?}, account_id: {:?} / nft_hash: {:?}", nft_token_id, nft_request_data.winner_account, payload.nft_hash);
 				},
 				Err(_) => {
 					return Err(Error::<T>::PendingWinnerDoesNotExist.into())
 				},
 			};
-
-			debug::RuntimeLogger::init();
-			debug::info!("--- add_nft_hash_to_winner: account_id: {:?} / nft_hash: {:?}", nft_request_data.winner_account, payload.nft_hash);
 		}
 
 		#[weight = 10_000]
