@@ -41,8 +41,6 @@ function Main(props) {
     return () => unsub && unsub()
   }, [api.query.system])
 
-  const { feedMaxHeight = 250 } = props
-
   return (
     <Grid.Column width={8}>
       {/* Session  */}
@@ -65,7 +63,7 @@ function Main(props) {
       {/* Events */}
       <h1 style={{ float: 'left' }}>Events</h1>
       <Button basic circular size="mini" color="grey" floated="right" icon="erase" onClick={(_) => setEventFeed([])} />
-      <Feed style={{ clear: 'both', overflow: 'auto', maxHeight: feedMaxHeight }} events={eventFeed} />
+      <Feed style={{ clear: 'both', overflow: 'auto', height: '250px' }} events={eventFeed} />
     </Grid.Column>
   )
 }
