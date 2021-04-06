@@ -107,8 +107,10 @@ const PALLET_ID: ModuleId = ModuleId(*b"JackPot!");
 type SessionIdType = u128;
 type GuessNumbersType = [u8; GUESS_NUMBERS_COUNT];
 type Winners<AccountId> = Vec<(Bet<AccountId>, u8)>;
+type NFTHash = Vec<u8>;
 
-#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
+
+#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, PartialOrd, Ord)]
 pub struct NFTRequestData<AccountId, Balance> {
 	winner_account: AccountId,
 	reward: Balance,
@@ -116,6 +118,8 @@ pub struct NFTRequestData<AccountId, Balance> {
 	score_out_of: u8,
 	session_id: SessionIdType,
 }
+
+type NFTRequestDataOf<T> = NFTRequestData<<T as frame_system::Config>::AccountId, BalanceOf<T>>;
 
 #[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
 pub struct Bet<AccountId> {
@@ -137,13 +141,25 @@ impl<T: SigningTypes> SignedPayload<T> for SessionNumbersPayload<T::Public, T::B
 	}
 }
 
+#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
+pub struct NftHashPayload<Public> {
+	public: Public,
+	nft_hash: NFTHash,
+}
+
+impl<T: SigningTypes> SignedPayload<T> for NftHashPayload<T::Public> {
+	fn public(&self) -> T::Public {
+		self.public.clone()
+	}
+}
+
 decl_storage! {
 	trait Store for Module<T: Config> as JackBlock {
 		SessionId get(fn session_id): SessionIdType;
 		SessionLength: T::BlockNumber = T::BlockNumber::from(SESSION_IN_BLOCKS);
 		Bets get(fn bets): map hasher(blake2_128_concat) SessionIdType => Vec<Bet<T::AccountId>>;
 		ClosedNotFinalisedSessionId get(fn closed_not_finalised_session): Option<SessionIdType>;
-		PendingWinnersNFT get(fn pending_winners_nft): Vec<NFTRequestData<T::AccountId, BalanceOf<T>>>;
+		PendingWinnersNFT get(fn pending_winners_nft): Vec<NFTRequestDataOf<T>>;
 
 		Authorities get(fn authorities) config(offchain_authorities): Vec<T::AccountId>;
 	}
@@ -166,6 +182,7 @@ decl_error! {
 	pub enum Error for Module<T: Config> {
 		SessionIdOverflow,
 		TryToFinalizeTheSessionWhichIsNotClosed,
+		PendingWinnerDoesNotExist,
 	}
 }
 
@@ -190,6 +207,12 @@ decl_module! {
 					debug::info!("--- offchain_worker error: {}", error);
 				}
 			}
+			
+			// TODO - set offchain worker lock to do not start twice for the same PendingWinnersNFT
+			let pending_winners_nft = Self::pending_winners_nft();
+			if pending_winners_nft.len() > 0 {
+				Self::generafte_pending_winners_nft(pending_winners_nft);
+			}
 		}
 
 		#[weight = 10_000]
@@ -211,6 +234,26 @@ decl_module! {
 			})?;
 
 			Self::deposit_event(RawEvent::NewBet(session_id, new_bet));
+		}
+
+		#[weight = 10_000]
+		pub fn add_nft_hash_to_winner(origin, nft_request_data: NFTRequestDataOf<T>, payload: NftHashPayload<T::Public>, _singature: T::Signature) {
+			ensure_none(origin)?;
+
+			let mut pending_winners = Self::pending_winners_nft();
+
+			match pending_winners.binary_search(&nft_request_data) {
+				Ok(index) => {
+					pending_winners.remove(index);
+					PendingWinnersNFT::<T>::put(pending_winners);
+				},
+				Err(_) => {
+					return Err(Error::<T>::PendingWinnerDoesNotExist.into())
+				},
+			};
+
+			debug::RuntimeLogger::init();
+			debug::info!("--- add_nft_hash_to_winner: account_id: {:?} / nft_hash: {:?}", nft_request_data.winner_account, payload.nft_hash);
 		}
 
 		#[weight = 10_000]
@@ -388,6 +431,33 @@ impl<T: Config> Module<T> {
 		Ok(())
 	}
 
+	fn generafte_pending_winners_nft(nft_requests_data: Vec<NFTRequestDataOf<T>>) {
+		nft_requests_data.iter().for_each(|request_data| {
+			debug::RuntimeLogger::init();
+			debug::info!("--- offchain_worker generafte_pending_winners_nft: {:?}", request_data);
+
+			let nft_hash: NFTHash = Vec::new();
+
+			let _result = Self::winner_nft_hash_send_unsigned(request_data.clone(), nft_hash); // TODO - Handle result errors
+		});
+	}
+
+	fn winner_nft_hash_send_unsigned(nft_request_data: NFTRequestDataOf<T>, nft_hash: NFTHash) -> Result<(), &'static str> {
+		let (_account, result) = Signer::<T, T::AuthorityId>::any_account().send_unsigned_transaction(
+			|account| NftHashPayload {
+				public: account.public.clone(),
+				nft_hash: nft_hash.clone(),
+			},
+			|payload, signature| {
+				Call::add_nft_hash_to_winner(nft_request_data.clone(), payload, signature)
+			}
+		).ok_or("No local accounts accounts available")?;
+
+		result.map_err(|()| "Unable to submit transaction")?;
+
+		Ok(())
+	}
+
 	fn get_random_number() -> u8 {
 		let random_seed = offchain::random_seed();
 		let mut rng = RandomNumberGenerator::<BlakeTwo256>::new(random_seed.into());
@@ -428,10 +498,10 @@ impl<T: Config> ValidateUnsigned for Module<T> {
 
 				// TODO - use aura keys to check authority
 
-				// let account_id = payload.public.clone().into_account();
-				// if !Self::is_authority_account(&account_id) {
-				// 	return InvalidTransaction::BadProof.into();
-				// }
+				let account_id = payload.public.clone().into_account();
+				if !Self::is_authority_account(&account_id) {
+					return InvalidTransaction::BadProof.into();
+				}
 
 				return ValidTransaction::with_tag_prefix("JackBlock/validate_unsigned/finalize_the_session")
 					.priority(UNSIGNED_TX_PRIORITY)
@@ -439,6 +509,26 @@ impl<T: Config> ValidateUnsigned for Module<T> {
 					.propagate(true)
 					.build();
 			},
+			Call::add_nft_hash_to_winner(_ntf_request_data, ref payload, ref signature) => {
+				let valid_signature = SignedPayload::<T>::verify::<T::AuthorityId>(payload, signature.clone());
+				if !valid_signature {
+					return InvalidTransaction::BadProof.into();
+				}
+
+				// TODO - Refactor this method to be used in finalize_the_session & add_nft_hash_to_winner
+				// TODO - use aura keys to check authority
+
+				let account_id = payload.public.clone().into_account();
+				if !Self::is_authority_account(&account_id) {
+					return InvalidTransaction::BadProof.into();
+				}
+
+				return ValidTransaction::with_tag_prefix("JackBlock/validate_unsigned/add_nft_hash_to_winner")
+					.priority(UNSIGNED_TX_PRIORITY)
+					.longevity(5)
+					.propagate(true)
+					.build();
+			}
 			_ => return InvalidTransaction::Call.into(),
 		};
 	}

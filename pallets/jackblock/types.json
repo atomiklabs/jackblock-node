@@ -19,5 +19,6 @@
         "score": "u8",
         "score_out_of": "u8",
         "session_id": "SessionIdType"
-    }
+    },
+    "NFTHash": "Vec<u8>"
 }
