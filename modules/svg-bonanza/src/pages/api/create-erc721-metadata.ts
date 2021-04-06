@@ -1,5 +1,5 @@
 import * as path from 'path';
-import * as fs from 'fs/promises';
+import * as fs from 'fs';
 import { NextApiRequest, NextApiResponse } from 'next';
 import { NFTStorage, Blob } from 'nft.storage';
 
@@ -56,7 +56,7 @@ async function generateSvgMarkup({
     style: 'currency',
   }).format(reward);
 
-  const svgTemplateFileBuffer = await fs.readFile(
+  const svgTemplateFileBuffer = await fs.promises.readFile(
     path.resolve('src', 'assets', 'nft-template.svg')
   );
 
