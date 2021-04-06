@@ -2,12 +2,14 @@ version: '3'
 services:
   jackblock-node:
     ports:
-      - "127.0.0.1:30333:30333/tcp"
-      - "127.0.0.1:9933:9933/tcp"
-    image: tkodckr/jackblock-node:latest
+      - "30333:30333"
+      - "9933:9933"
+      - "9944:9944"
+    image: tkodckr/jackblock-node:420dca47
     volumes:
       - "data:/data"
-    command: node-template
+    command: node-template --chain local
 
 volumes:
-  data:
+    data:
+    
