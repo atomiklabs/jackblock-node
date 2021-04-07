@@ -129,15 +129,3 @@ public-node-start:
 public-node-add-keys:
 	curl http://localhost:$(RPC_PORT_0) -H "Content-Type:application/json;charset=utf-8" -d "@$(KEYS_PATH_PREFIX)/private-key-aura.json" && \
 	curl http://localhost:$(RPC_PORT_0) -H "Content-Type:application/json;charset=utf-8" -d "@$(KEYS_PATH_PREFIX)/private-key-grandpa.json"
-
-docker-local-node-0-start:
-	docker run -it -v $(PWD)/.local/node_0/:/data -p 30333:30333 -p 9933:9933 $(SUBSTRATE_NODE_IMAGE) node-template -lruntime=debug \
-		--base-path /data/$(BASE_PATH_PREFIX)/node_0 \
-		--chain local \
-		--port $(PORT_0) \
-		--ws-port $(WS_PORT_0) \
-		--rpc-port $(RPC_PORT_0) \
-		--validator \
-		--rpc-methods Unsafe \
-		--telemetry-url $(TELEMETRY_URL) \
-		--name jackblock-node-0 \
