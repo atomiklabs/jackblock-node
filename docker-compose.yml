@@ -1,11 +1,11 @@
 version: '3'
 services:
   jackblock-node:
+    image: jb-alt:latest
     ports:
       - "30333:30333"
       - "9933:9933"
       - "9944:9944"
-    image: tkodckr/jackblock-node:420dca47
     volumes:
       - "data:/data"
     command: node-template --chain local

@@ -141,3 +141,7 @@ Cargo.lock
 **/*.rs.bk
 
 # End of https://www.gitignore.io/api/rust,macos,linux,jetbrains
+
+./scripts
+
+./scripts/Dockerfile

@@ -2,9 +2,9 @@ FROM paritytech/ci-linux:production as builder
 LABEL description="This is the build stage for Jack Block. Here we create the binary."
 
 ARG PROFILE=release
-WORKDIR /tmp
+WORKDIR /substrate
 
-COPY . /tmp
+COPY . /substrate
 
 RUN cargo build --$PROFILE
 
@@ -14,17 +14,18 @@ FROM debian:buster-slim
 LABEL description="This is the 2nd stage: a very small image where we copy the Jackblock binary."
 ARG PROFILE=release
 
-RUN useradd -m -u 1000 -U -s /bin/sh -d /jackblock jackblock && \
-	mkdir -p /jackblock/.local/share && \
-	mkdir -p /data && \
-	chown -R jackblock:jackblock /data && \
-	ln -s /data /jackblock/.local/share/jackblock && \
-	rm -rf /usr/bin /usr/sbin
+RUN useradd -m -u 1000 -U -s /bin/sh -d /substrate substrate && \
+	mkdir -p /substrate/.local/share/substrate && \
+	chown -R substrate:substrate /substrate/.local && \
+	ln -s /substrate/.local/share/substrate /data
 
-USER jackblock
+COPY --from=builder /substrate/target/$PROFILE/node-template /usr/local/bin
 
-COPY --from=builder --chown=jackblock /tmp/target/$PROFILE/node-template /usr/local/bin
-RUN chmod uog+x /usr/local/bin/node-template
+# checks
+RUN ldd /usr/local/bin/node-template && \
+	/usr/local/bin/node-template --version
+
+USER substrate
 
 # 30333 for p2p 
 # 9933 for RPC call
