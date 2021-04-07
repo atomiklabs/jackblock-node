@@ -61,7 +61,7 @@ use sp_core::{
 		KeyTypeId,
 	},
 };
-use codec::{alloc::string::ToString};
+use codec::{alloc::string::{ToString, String}};
 use sp_arithmetic::Percent;
 use orml_nft::Module as NftModule;
 
@@ -259,8 +259,8 @@ decl_module! {
 					pending_winners.remove(index);
 					PendingWinnersNFT::<T>::put(pending_winners);
 
-					debug::RuntimeLogger::init();
-					debug::info!("--- add_nft_hash_to_winner: nft_token_id: {:?}, account_id: {:?} / nft_hash: {:?}", nft_token_id, nft_request_data.winner_account, payload.nft_hash);
+					let nft_hash_string = String::from_utf8(payload.nft_hash).expect("--- invalid utf-8");
+					debug::info!("--- add_nft_hash_to_winner: nft_token_id: {:?}, account_id: {:?} / nft_hash: {}", nft_token_id, nft_request_data.winner_account, nft_hash_string);
 				},
 				Err(_) => {
 					return Err(Error::<T>::PendingWinnerDoesNotExist.into())
@@ -505,8 +505,6 @@ impl<T: Config> Module<T> {
 		}
 
 		let result = response.body().collect::<Vec<u8>>();
-
-		// TODO - CONVERT IT TO PROPER IPFS HASH (as Vec<u8>)
 
 		Ok(result)
 	}

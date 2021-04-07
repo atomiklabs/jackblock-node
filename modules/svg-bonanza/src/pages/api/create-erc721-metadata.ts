@@ -40,8 +40,8 @@ export default async function createERC721Metadata(
     new Blob([JSON.stringify(metadata)]),
   );
 
-  console.log('--- res.status: ', { metadataCid })
-  res.status(200).json({ metadataCid });
+  console.log('--- res.status: ', metadataCid)
+  res.status(200).send(metadataCid);
 }
 
 interface GenerateSvgMarkupProps {

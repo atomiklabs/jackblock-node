@@ -13,6 +13,7 @@
         "session_numbers": "GuessNumbersType"
     },
     "Winners": "Vec<(Bet, u8)>",
+    "NFTRequestDataOf": "NFTRequestData",
     "NFTRequestData": {
         "winner_account": "AccountId",
         "reward": "Balance",
@@ -20,12 +21,17 @@
         "score_out_of": "u8",
         "session_id": "SessionIdType"
     },
+    "NFTHash": "Vec<u8>",
     "NftHashPayload": {
         "public": "Public",
-	    "nft_hash": "NFTHash"
+        "nft_hash": "NFTHash"
     },
-    "NFTRequestDataOf": "NFTRequestData",
-    "NFTHash": "Vec<u8>",
-    "TokenId": "u32",
-    "ClassId": "u32"
+    "TokenInfoOf": "TokenInfo",
+    "TokenInfo": {
+        "metadata": "Vec<u8>",
+        "owner": "AccountId",
+        "data": "NFTHash"
+    },
+    "ClassId": "u32",
+    "TokenId": "u32"
 }
