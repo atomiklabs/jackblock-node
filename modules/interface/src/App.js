@@ -12,6 +12,7 @@ import Events from './Events'
 import SessionId from './SessionId'
 import PotBalance from './PotBalance'
 import NFTs from './NFTs'
+import Interactor from './Interactor'
 
 function Main() {
   const [accountAddress, setAccountAddress] = useState(null)
@@ -66,6 +67,9 @@ function Main() {
           </Grid.Row>
           <Grid.Row>
             <NFTs accountPair={accountPair} />
+          </Grid.Row>
+          <Grid.Row>
+            <Interactor accountPair={accountPair} />
           </Grid.Row>
         </Grid>
       </Container>

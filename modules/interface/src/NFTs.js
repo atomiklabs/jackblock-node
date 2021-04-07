@@ -1,29 +1,70 @@
 import React, { useEffect, useState } from 'react'
 import { Grid, Card } from 'semantic-ui-react'
+import axios from 'axios'
 
 import { useSubstrate } from './substrate-lib'
-import NFT_JSON from './mock/nfts.json'
-// https://ipfs.io/ipfs/bafkreiakognvnpaukbw4tgpevs3qwsdc22r7tnsgaxfcrpxt6eerdviwji
-
-const NFTS_MOCK = [NFT_JSON, NFT_JSON, NFT_JSON]
 
 function Main(props) {
   const { api } = useSubstrate()
   const { accountPair } = props
 
-  const [nfts, setNFTs] = useState(NFTS_MOCK)
+  const [nfts, setNFTs] = useState([])
 
-  // useEffect(() => {
-  //   let unsubscribe;
-  //   api.query.jackBlock.nfts(newValue => {
-  //     setNFTs(newValue.unwrap().toNumber());
-  //   }).then(unsub => {
-  //     unsubscribe = unsub;
-  //   })
-  //     .catch(console.error);
+  useEffect(() => {
+    let unsubscribe
 
-  //   return () => unsubscribe && unsubscribe();
-  // }, [api.query.jackBlock]);
+    api.derive.chain
+      .bestNumber((blockN) => {
+        const everySecondBlock = blockN.toHuman() % 2
+        if (everySecondBlock) loadNFTs()
+      })
+      .then((unsub) => {
+        unsubscribe = unsub
+      })
+      .catch(console.error)
+
+    return () => unsubscribe && unsubscribe()
+  }, [api.derive.chain.bestNumber])
+
+  const loadNFTs = async () => {
+    // const userTokens = await getUserTokens()
+    // const userTokensFromIPFS = await getUserTokensFromIPFS(userTokens)
+    // setNFTs(userTokensFromIPFS)
+
+    const tokenIPFSUri = 'bafkreiakognvnpaukbw4tgpevs3qwsdc22r7tnsgaxfcrpxt6eerdviwji'
+    const userTokens = [{ data: tokenIPFSUri }, { data: tokenIPFSUri }, { data: tokenIPFSUri }] // = getUserTokens()
+    const userTokensFromIPFS = await getUserTokensFromIPFS(userTokens)
+    setNFTs(userTokensFromIPFS)
+  }
+
+  const getUserTokens = async () => {
+    const accountId = accountPair.address
+    const tokensByOwner = await api.query.nft.tokensByOwner(accountId, [0, 0]) // (accountId, [classId, tokenId ???])
+    const tokensByOwnerWithInfoPromise = tokensByOwner.map(getTokenInfo)
+    const tokensByOwnerWithInfo = await Promise.all(tokensByOwnerWithInfoPromise)
+    return tokensByOwnerWithInfo
+  }
+
+  const getTokenInfo = async (data) => {
+    const { classId, tokenId } = data
+    return api.query.nft.tokens(classId, tokenId) // (classId, tokenId)
+  }
+
+  const getUserTokensFromIPFS = async (userTokens) => {
+    const userTokensFromIPFSPromise = userTokens.map(getUserTokenFromIPFSInfo)
+    const userTokensFromIPFS = await Promise.all(userTokensFromIPFSPromise)
+    return userTokensFromIPFS
+  }
+
+  const getUserTokenFromIPFSInfo = async (token) => {
+    const uri = token.data
+    try {
+      const { data } = await axios.get(`https://ipfs.io/ipfs/${uri}`)
+      return data
+    } catch (error) {
+      console.error(error)
+    }
+  }
 
   return (
     <Grid.Column>
@@ -59,8 +100,5 @@ const NFT = (props) => {
 
 export default function NFTs(props) {
   const { api } = useSubstrate()
-  return api.query.jackBlock ? (
-    // return api.query.jackBlock && api.query.jackBlock.nfts
-    <Main {...props} />
-  ) : null
+  return api.query.jackBlock ? <Main {...props} /> : null
 }
