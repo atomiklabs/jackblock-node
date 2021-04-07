@@ -61,6 +61,7 @@ use sp_core::{
 		KeyTypeId,
 	},
 };
+use sp_std::convert::{TryInto};
 use codec::{alloc::string::{ToString, String}};
 use sp_arithmetic::Percent;
 use orml_nft::Module as NftModule;
@@ -466,6 +467,8 @@ impl<T: Config> Module<T> {
 		const HTTP_REMOTE_REQUEST: &str = "http://localhost:3000/api/create-erc721-metadata";
 		const FETCH_TIMEOUT_PERIOD: u64 = 15_000;
 
+		let reward = TryInto::<u128>::try_into(nft_request_data.reward).unwrap_or(0);
+
 		let request_body = "{
 			\"score\": <SCORE>, 
 			\"scoreOutOf\": <SCORE_OUT_OF>,
@@ -475,10 +478,8 @@ impl<T: Config> Module<T> {
 			.to_string()
 			.replace("<SCORE>", &nft_request_data.score.to_string())
 			.replace("<SCORE_OUT_OF>", &nft_request_data.score_out_of.to_string())
-			// .replace("<REWARD>", &nft_request_data.reward.to_string()) // TODO - REPLACE BALANCE TO STRING
-			.replace("<REWARD>", &100.to_string())
+			.replace("<REWARD>", &reward.to_string())
 			.replace("<SESSION_ID>", &nft_request_data.session_id.to_string());
-
 
 		let mut request_vector = Vec::new();
 		request_vector.push(request_body.clone());
