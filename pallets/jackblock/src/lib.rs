@@ -452,8 +452,6 @@ impl<T: Config> Module<T> {
 
 			match Self::fetch_nft_hash(request_data.clone()) {
 				Ok(nft_hash) => {
-					debug::info!("--- fetch_nft_hash result OK: {:?}", nft_hash);
-
 					let _result = Self::winner_nft_hash_send_unsigned(request_data.clone(), nft_hash); // TODO - Handle result errors
 				},
 				Err(error) => {
