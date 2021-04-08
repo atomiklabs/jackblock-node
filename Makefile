@@ -14,8 +14,6 @@ BOOT_NODE_PREFIX?=/ip4/$(BOOT_NODE_IP)/tcp/$(PORT_0)/p2p
 PUBLIC_CHAIN_SPEC?=./publicChainSpecRaw.json
 PUBLIC_RPC_CORS?=all
 
-SUBSTRATE_NODE_IMAGE?=tkodckr/jackblock-node:latest
-
 run:
 	cargo run -- --dev --tmp
 
