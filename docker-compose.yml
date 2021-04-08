@@ -1,15 +1,56 @@
-version: '3'
+version: '3.7'
+
 services:
   jackblock-node:
-    image: jb-alt:latest
+    image: tkodckr/jackblock-node:latest
+    restart: always
     ports:
       - "30333:30333"
       - "9933:9933"
       - "9944:9944"
     volumes:
       - "data:/data"
-    command: node-template --chain local
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.node-rpc-router.rule=Host(`rpc.localhost`) || Path(`/rpc`)"
+      - "traefik.http.routers.node-rpc-router.service=node-rpc-service"
+      - "traefik.http.services.node-rpc-service.loadbalancer.server.port=9933"
+      - "traefik.http.routers.node-ws-router.rule=Host(`ws.localhost`) || Path(`/ws`)"
+      - "traefik.http.routers.node-ws-router.service=node-ws-service"
+      - "traefik.http.services.node-ws-service.loadbalancer.server.port=9933"
+      
+    entrypoint: node-template
+    command: --chain local -lruntime=debug --port 30333 --rpc-port 9933 --ws-port 9944 --rpc-cors all --rpc-methods Unsafe --no-mdns --name "Yo Jack Block"  --ws-external --rpc-external
+
+  traefik:
+    image: "traefik:2.4.8"
+    container_name: "traefik"
+    command:
+      - "--accesslog"
+      - "--log.level=DEBUG"
+      - "--api.insecure=true"
+      # enables dashboard at :8080/dashboard
+      - "--api.dashboard=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.node-rpc-router.address=:9933"
+      - "--entrypoints.node-ws-router.address=:9944"
+    ports:
+      - "80:80"
+      # The Web UI (enabled by --api.insecure=true)
+      - "8080:8080"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+
+  whoami:
+    image: "traefik/whoami"
+    container_name: "simple-service"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.whoami.rule=Host(`whoami.localhost`) || Path(`/who-am-i`)"
+      - "traefik.http.routers.whoami.entrypoints=web"
 
 volumes:
-    data:
+  data:
     
