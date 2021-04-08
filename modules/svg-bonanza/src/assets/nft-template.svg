@@ -9,23 +9,22 @@
             <g style="mix-blend-mode:color-burn" opacity="0.61" clip-path="url(#clip2)">
                 <rect width="563" height="563" transform="translate(40 38)" fill="url(#paint2_linear)" style="mix-blend-mode:lighten" />
                 <g style="mix-blend-mode:overlay">
-                    <rect x="-34" y="8" width="596" height="596" fill="url(#pattern0)" />
+                    <rect x="0" y="0" width="596" height="596" fill="url(#pattern0)" />
                 </g>
                 <g clip-path="url(#clip3)">
                     <g filter="url(#filter0_d)">
-                        <text fill="black" xml:space="preserve" font-family="Rum Raisin" letter-spacing="0em" style="" font-size="64">
+                        <text fill="black" xml:space="preserve" font-family="Rum Raisin" letter-spacing="0em" style="" font-size="48">
                             <tspan x="139.031" y="330.828">{reward}</tspan>
                         </text>
                     </g>
-                    <text fill="black" xml:space="preserve" style="white-space: pre" font-family="Rum Raisin" font-size="64" letter-spacing="0em">
-                        <tspan y="478.625" x="230">You scored {score}</tspan>
-                        <tspan y="542.625" x="364">out of {scoreOutOf}</tspan>
+                    <text fill="black" xml:space="preserve" style="white-space: pre" font-family="Rum Raisin" font-size="48" letter-spacing="0em">
+                        <tspan y="480" x="180">You scored {score} of {scoreOutOf}</tspan>
                     </text>
                     <text fill="black" xml:space="preserve" style="white-space: pre" font-family="Rum Raisin" letter-spacing="0em" font-size="128">
                         <tspan x="65" y="175.656">You won!</tspan>
                     </text>
                     <text fill="black" xml:space="preserve" style="white-space: pre" font-family="Rum Raisin" font-size="18" letter-spacing="0em">
-                        <tspan x="65" y="582.082">{signature}</tspan>
+                        <tspan x="222" y="505">session: {sessionId} / timestamp: {timestamp}</tspan>
                     </text>
                 </g>
             </g>
