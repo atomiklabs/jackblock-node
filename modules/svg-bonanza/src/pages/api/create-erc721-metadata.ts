@@ -71,7 +71,8 @@ async function generateSvgMarkup({
     .replace('{reward}', `${rewardFormatted}`)
     .replace('{score}', score)
     .replace('{scoreOutOf}', scoreOutOf)
-    .replace('{signature}', sessionId);
+    .replace('{sessionId}', sessionId)
+    .replace('{timestamp}', Date.now().toString());
 
   return svgMarkup;
 }
