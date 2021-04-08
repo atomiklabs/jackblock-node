@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react'
-import { Grid, Card } from 'semantic-ui-react'
+import React, { useEffect, useState, useRef } from 'react'
+import { Grid, Card, Dimmer, Loader } from 'semantic-ui-react'
 import axios from 'axios'
 
 import { useSubstrate } from './substrate-lib'
@@ -7,16 +7,17 @@ import { useSubstrate } from './substrate-lib'
 function Main(props) {
   const { api } = useSubstrate()
   const { accountPair } = props
-
+  const accountAddress = useRef(accountPair.address)
   const [nfts, setNFTs] = useState([])
+  const nftsCount = useRef(0)
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     let unsubscribe
 
     api.derive.chain
-      .bestNumber((blockN) => {
-        const everySecondBlock = blockN.toHuman() % 2
-        if (everySecondBlock) loadNFTs()
+      .bestNumber((_blockN) => {
+        loadNFTs()
       })
       .then((unsub) => {
         unsubscribe = unsub
@@ -26,32 +27,53 @@ function Main(props) {
     return () => unsubscribe && unsubscribe()
   }, [api.derive.chain.bestNumber])
 
-  const loadNFTs = async () => {
-    // const userTokens = await getUserTokens()
-    // const userTokensFromIPFS = await getUserTokensFromIPFS(userTokens)
-    // setNFTs(userTokensFromIPFS)
+  useEffect(() => {
+    setIsLoading(true)
+    setNFTs([])
+    nftsCount.current = 0
+    accountAddress.current = props.accountPair.address
+    loadNFTs()
+  }, [props.accountPair.address])
 
-    const tokenIPFSUri = 'bafkreiakognvnpaukbw4tgpevs3qwsdc22r7tnsgaxfcrpxt6eerdviwji'
-    const userTokens = [{ data: tokenIPFSUri }, { data: tokenIPFSUri }, { data: tokenIPFSUri }] // = getUserTokens()
+  const loadNFTs = async () => {
+    const userTokens = await getUserTokens()
+    if (userTokens.length === nftsCount.current) {
+      setIsLoading(false)
+      return
+    }
+    setIsLoading(true)
     const userTokensFromIPFS = await getUserTokensFromIPFS(userTokens)
     setNFTs(userTokensFromIPFS)
+    nftsCount.current = userTokens.length
+    setIsLoading(false)
   }
 
   const getUserTokens = async () => {
-    const accountId = accountPair.address
-    const tokensByOwner = await api.query.nft.tokensByOwner(accountId, [0, 0]) // (accountId, [classId, tokenId ???])
+    const tokensByOwner = await getTokensIdByOwner(accountAddress.current)
     const tokensByOwnerWithInfoPromise = tokensByOwner.map(getTokenInfo)
-    const tokensByOwnerWithInfo = await Promise.all(tokensByOwnerWithInfoPromise)
+    const tokensByOwnerWithInfoRaw = await Promise.all(tokensByOwnerWithInfoPromise)
+    const tokensByOwnerWithInfo = tokensByOwnerWithInfoRaw.map((token) => token.toHuman())
     return tokensByOwnerWithInfo
   }
 
-  const getTokenInfo = async (data) => {
-    const { classId, tokenId } = data
-    return api.query.nft.tokens(classId, tokenId) // (classId, tokenId)
+  const getTokensIdByOwner = async (accountId) => {
+    const tokensByOwnerQuery = await api.query.nft.tokensByOwner.entries(accountId)
+    const tokensByOwner = tokensByOwnerQuery.map((tokenMapRaw) => {
+      const tokenMap = tokenMapRaw[0].toHuman()
+      const classIdAndTokenId = tokenMap[1]
+      const tokenId = classIdAndTokenId[1]
+      return tokenId
+    })
+    return tokensByOwner
   }
 
-  const getUserTokensFromIPFS = async (userTokens) => {
-    const userTokensFromIPFSPromise = userTokens.map(getUserTokenFromIPFSInfo)
+  const getTokenInfo = async (tokenId) => {
+    const CLASS_ID = 0
+    return api.query.nft.tokens(CLASS_ID, tokenId)
+  }
+
+  const getUserTokensFromIPFS = async (userTokensInfo) => {
+    const userTokensFromIPFSPromise = userTokensInfo.map(getUserTokenFromIPFSInfo)
     const userTokensFromIPFS = await Promise.all(userTokensFromIPFSPromise)
     return userTokensFromIPFS
   }
@@ -67,8 +89,9 @@ function Main(props) {
   }
 
   return (
-    <Grid.Column>
+    <Grid.Column style={{ minHeight: '360px' }}>
       <h1>Your NFTs</h1>
+      {isLoading && <LoaderNFTs />}
       <Card.Group itemsPerRow={3}>
         {nfts.map((nft, i) => (
           <NFT {...nft} key={i} />
@@ -98,7 +121,15 @@ const NFT = (props) => {
   )
 }
 
+const LoaderNFTs = () => {
+  return (
+    <Dimmer active inverted>
+      <Loader>Loading NFTS...</Loader>
+    </Dimmer>
+  )
+}
+
 export default function NFTs(props) {
   const { api } = useSubstrate()
-  return api.query.jackBlock ? <Main {...props} /> : null
+  return props.accountPair && props.accountPair.address ? <Main {...props} /> : null
 }

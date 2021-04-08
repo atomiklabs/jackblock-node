@@ -63,7 +63,7 @@ function Main(props) {
       {/* Events */}
       <h1 style={{ float: 'left' }}>Events</h1>
       <Button basic circular size="mini" color="grey" floated="right" icon="erase" onClick={(_) => setEventFeed([])} />
-      <Feed style={{ clear: 'both', overflow: 'auto', height: '250px' }} events={eventFeed} />
+      <Feed style={{ clear: 'both', overflow: 'auto', height: '190px' }} events={eventFeed} />
     </Grid.Column>
   )
 }
