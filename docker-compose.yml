@@ -12,15 +12,41 @@ services:
       - "data:/data"
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.node-rpc-router.rule=Host(`rpc.localhost`) || Path(`/rpc`)"
-      - "traefik.http.routers.node-rpc-router.service=node-rpc-service"
-      - "traefik.http.services.node-rpc-service.loadbalancer.server.port=9933"
-      - "traefik.http.routers.node-ws-router.rule=Host(`ws.localhost`) || Path(`/ws`)"
-      - "traefik.http.routers.node-ws-router.service=node-ws-service"
-      - "traefik.http.services.node-ws-service.loadbalancer.server.port=9933"
+      # RPC endpoint
+      - traefik.http.routers.node-rpc-router-secure.rule=Path(`/rpc`)
+      - traefik.http.routers.node-rpc-router-secure.tls=true
+      - traefik.http.routers.node-rpc-router-secure.service=node-rpc-service
+      - traefik.http.services.node-rpc-service.loadbalancer.server.port=9933
       
+      - traefik.http.middlewares.rpc-redirect-web-secure.redirectscheme.scheme=rpcs
+      - traefik.http.routers.node-rpc-router.middlewares=rpc-redirect-web-secure
+
+      - traefik.http.routers.node-rpc-router.rule=Path(`/rpc`)
+
+      ## TODO: enable WSS scheme for the secure websockets endpoint; require
+      ## * custom domain name
+      ## * valid certificate for this custom domain name
+      # - traefik.http.routers.node-ws-router-secure.rule=Path(`/ws`)
+      # - traefik.http.routers.node-ws-router-secure.tls=true
+      # - traefik.http.routers.node-ws-router-secure.service=node-ws-service
+      # - traefik.http.services.node-ws-service.loadbalancer.server.port=9944
+
+      # - traefik.http.middlewares.ws-redirect-web-secure.redirectscheme.scheme=wss
+      # - traefik.http.routers.node-ws-router.middlewares=ws-redirect-web-secure
+
+      # - traefik.http.routers.node-ws-router.rule=Path(`/ws`)
+
+      # TODO: swap the unsecure WS scheme with WSS one; requires the TODO above to be completed first
+      # Unsecure Webscokets endpoint
+      - traefik.http.routers.node-ws-router.rule=Path(`/ws`)
+      - traefik.http.routers.node-ws-router.service=node-ws-service
+      - traefik.http.services.node-ws-service.loadbalancer.server.port=9944
+
+
+
     entrypoint: node-template
     command: --chain local -lruntime=debug --port 30333 --rpc-port 9933 --ws-port 9944 --rpc-cors all --rpc-methods Unsafe --no-mdns --name "Yo Jack Block"  --ws-external --rpc-external
+
 
   traefik:
     image: "traefik:2.4.8"
@@ -34,23 +60,34 @@ services:
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
       - "--entrypoints.node-rpc-router.address=:9933"
       - "--entrypoints.node-ws-router.address=:9944"
     ports:
       - "80:80"
+      - "443:443"
       # The Web UI (enabled by --api.insecure=true)
       - "8080:8080"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
+
 
   whoami:
     image: "traefik/whoami"
     container_name: "simple-service"
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.whoami.rule=Host(`whoami.localhost`) || Path(`/who-am-i`)"
-      - "traefik.http.routers.whoami.entrypoints=web"
+      # HTTPS
+      - traefik.http.routers.whoami-secure.rule=Path(`/whoami`)
+      - traefik.http.routers.whoami-secure.tls=true
+      - traefik.http.routers.whoami-secure.entrypoints=websecure
+      # HTTP
+      - traefik.http.routers.whoami.rule=Path(`/whoami`)
+      - traefik.http.routers.whoami.entrypoints=web
+      # HTTP -> HTTPS redirect
+      - traefik.http.routers.whoami.middlewares=redirect-web-secure
+      # HTTP -> HTTPS permanent redirect
+      - traefik.http.middlewares.redirect-web-secure.redirectscheme.scheme=https
 
 volumes:
   data:
-    
