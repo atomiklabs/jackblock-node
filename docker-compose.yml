@@ -21,10 +21,10 @@ services:
 
     entrypoint: node-template
     # command for the boot node
-    command: -lruntime=debug --rpc-external --ws-external --chain public --port 30333 --rpc-port 9933 --ws-port 9944 --validator --rpc-cors all --rpc-methods Unsafe --no-mdns --name jackblock-node-tko --telemetry-url 'wss://telemetry.polkadot.io/submit/ 0'
+    # command: -lruntime=debug --rpc-external --ws-external --chain public --port 30333 --rpc-port 9933 --ws-port 9944 --validator --rpc-cors all --rpc-methods Unsafe --no-mdns --name jackblock-node-tko --telemetry-url 'wss://telemetry.polkadot.io/submit/ 0' --node-key 36b2372af482746a4ddb6d5755f77c8487d7b92cf479a1dc84935ac071deadb4
     # command for every other node
-    # command: -lruntime=debug --rpc-external --ws-external --chain public --port 30333 --rpc-port 9933 --ws-port 9944 --validator --rpc-cors all --rpc-methods Unsafe --bootnodes /ip4/3.25.70.58/tcp/30333/p2p/12D3KooW9zewVms4dFHk6ctsoLY1wJkFvmfWYq3M4nTDj8dozEt8 --no-mdns --name jackblock-node-rafal --telemetry-url 'wss://telemetry.polkadot.io/submit/ 0'
-
+    command: -lruntime=debug --rpc-external --ws-external --chain public --port 30333 --rpc-port 9933 --ws-port 9944 --validator --rpc-cors all --rpc-methods Unsafe --bootnodes /ip4/3.25.70.58/tcp/30333/p2p/12D3KooWGkcu5myAw1TNDJMjaQr9pYisEuEkxg3USH5VARSXoYFK --no-mdns --name jackblock-node-rafal --telemetry-url 'wss://telemetry.polkadot.io/submit/ 0'
+  
 
   traefik:
     image: "traefik:2.4.8"
