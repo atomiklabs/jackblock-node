@@ -153,15 +153,15 @@ pub fn public_testnet_config() -> Result<ChainSpec, String> {
 					ed25519::Public::from_slice(&hex!("02a51935ea51f45a72f176e1f3f542fdbb790ccaf8f5b357faaa8b6882147024")).into(),
 				),
 				(
-					sr25519::Public::from_slice(&hex!("3e0d36d4f8e06c6f92a71acd57ea6d56c5b55347c8883a172a732ff0dd24211d")).into(), // tomek
-					ed25519::Public::from_slice(&hex!("76961074863c9ff54eec83b534cb2e17f1316af5e692a5d1021603884128d2c9")).into(),
+					sr25519::Public::from_slice(&hex!("b69497dba04762745d890a8d2ae2a5a36ce31ec954961891914cdf3cd0c54415")).into(), // tomek
+					ed25519::Public::from_slice(&hex!("a73bc93fbc4488f6c711e27e37ba208acb65586bf67e8e4f3252756dd7c20404")).into(),
 				),
 			],
 			// Off-chain authorities
 			vec![
 				hex!("f6de5cd7b974141f359efd875f56d261ceb1c7af567fc92787e6912d1ebe875b").into(), // rafal
 				hex!("286818e712a21ffb2efd5af0b38e1ddd5525cd03788b4f62f9a85429a9238078").into(), // miko
-				hex!("3e0d36d4f8e06c6f92a71acd57ea6d56c5b55347c8883a172a732ff0dd24211d").into(), // tomek
+				hex!("b69497dba04762745d890a8d2ae2a5a36ce31ec954961891914cdf3cd0c54415").into(), // tomek
 			],
 			// Sudo account
 			sr25519::Public::from_slice(&hex!("f6de5cd7b974141f359efd875f56d261ceb1c7af567fc92787e6912d1ebe875b")).into(), // node-0
@@ -169,7 +169,7 @@ pub fn public_testnet_config() -> Result<ChainSpec, String> {
 			vec![
 				hex!("f6de5cd7b974141f359efd875f56d261ceb1c7af567fc92787e6912d1ebe875b").into(), // rafal
 				hex!("286818e712a21ffb2efd5af0b38e1ddd5525cd03788b4f62f9a85429a9238078").into(), // miko
-				hex!("3e0d36d4f8e06c6f92a71acd57ea6d56c5b55347c8883a172a732ff0dd24211d").into(), // tomek
+				hex!("b69497dba04762745d890a8d2ae2a5a36ce31ec954961891914cdf3cd0c54415").into(), // tomek
 			],
 			true,
 		),
