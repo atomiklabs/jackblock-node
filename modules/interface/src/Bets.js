@@ -10,7 +10,7 @@ function Main(props) {
 
   const [status, setStatus] = useState('')
   const [bets, setBets] = useState([])
-  const [formValue, setFormValue] = useState(0)
+  const [formValue, setFormValue] = useState('0x010203040506')
 
   useEffect(() => {
     let unsubscribe
@@ -34,7 +34,7 @@ function Main(props) {
   }
 
   return (
-    <Grid.Column width={8}>
+    <Grid.Column width={8} stretched={false}>
       <h1>Bets</h1>
       <Form>
         <Form.Field>
@@ -43,12 +43,13 @@ function Main(props) {
             state="newValue"
             type="string"
             onChange={(_, { value }) => setFormValue(value)}
+            value={formValue}
           />
         </Form.Field>
         <Form.Field style={{ textAlign: 'center' }}>
           <TxButton
             accountPair={accountPair}
-            label="AddNewBet"
+            label="Add Bet"
             type="SIGNED-TX"
             setStatus={setStatus}
             attrs={{
