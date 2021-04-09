@@ -11,59 +11,55 @@ services:
     volumes:
       - "data:/data"
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.node-rpc-router.rule=Path(`/rpc`)"
-      - "traefik.http.routers.node-rpc-router.service=node-rpc-service"
-      - "traefik.http.services.node-rpc-service.loadbalancer.server.port=9933"
-      - "traefik.http.routers.node-ws-router.rule=Path(`/ws`)"
-      - "traefik.http.routers.node-ws-router.service=node-ws-service"
-      - "traefik.http.services.node-ws-service.loadbalancer.server.port=9944"
+      - traefik.enable=true
+      # RPC
+      - traefik.http.routers.rpc.rule=Host(`rpc.jackblock.network`) && Path(`/`)
+      - traefik.http.routers.rpc.entrypoints=websecure
+      - traefik.http.routers.rpc.tls=true
+      # Certificates RPC
+      - traefik.http.routers.rpc.tls.certresolver=leresolver
+      - traefik.http.routers.rpc.tls.domains[0].main=rpc.jackblock.network
+      - traefik.http.services.svc-rpc.loadbalancer.server.port=9933
+      - traefik.http.routers.rpc.service=svc-rpc
+
+      # WSS
+      - traefik.http.routers.ws.rule=Host(`rpc.jackblock.network`) && Path(`/ws`)
+      - traefik.http.routers.ws.entrypoints=websecure
+      - traefik.http.routers.ws.tls=true
+      # Certificates WSS
+      - traefik.http.routers.ws.tls.certresolver=leresolver
+      - traefik.http.routers.ws.tls.domains[0].main=rpc.jackblock.network
+      - traefik.http.services.svc-ws.loadbalancer.server.port=9944
+      - traefik.http.routers.ws.service=svc-ws
 
     entrypoint: node-template
     # command for the boot node
-    # command: -lruntime=debug --rpc-external --ws-external --chain public --port 30333 --rpc-port 9933 --ws-port 9944 --validator --rpc-cors all --rpc-methods Unsafe --no-mdns --name jackblock-node-tko --telemetry-url 'wss://telemetry.polkadot.io/submit/ 0' --node-key 36b2372af482746a4ddb6d5755f77c8487d7b92cf479a1dc84935ac071deadb4
+    command: -lruntime=debug --rpc-external --ws-external --chain public --port 30333 --rpc-port 9933 --ws-port 9944 --validator --rpc-cors all --rpc-methods Unsafe --no-mdns --name jackblock-node-tko --telemetry-url 'wss://telemetry.polkadot.io/submit/ 0' --node-key 36b2372af482746a4ddb6d5755f77c8487d7b92cf479a1dc84935ac071deadb4
     # command for every other node
-    command: -lruntime=debug --rpc-external --ws-external --chain public --port 30333 --rpc-port 9933 --ws-port 9944 --validator --rpc-cors all --rpc-methods Unsafe --bootnodes /ip4/3.25.70.58/tcp/30333/p2p/12D3KooWGkcu5myAw1TNDJMjaQr9pYisEuEkxg3USH5VARSXoYFK --no-mdns --name jackblock-node-rafal --telemetry-url 'wss://telemetry.polkadot.io/submit/ 0'
-  
+    # command: -lruntime=debug --rpc-external --ws-external --chain public --port 30333 --rpc-port 9933 --ws-port 9944 --validator --rpc-cors all --rpc-methods Unsafe --bootnodes /ip4/54.253.234.233/tcp/30333/p2p/12D3KooWGkcu5myAw1TNDJMjaQr9pYisEuEkxg3USH5VARSXoYFK --no-mdns --name jackblock-node-rafal --telemetry-url 'wss://telemetry.polkadot.io/submit/ 0'
+
 
   traefik:
     image: "traefik:2.4.8"
     container_name: "traefik"
     command:
-      - "--accesslog"
-      - "--log.level=DEBUG"
-      - "--api.insecure=true"
-      # enables dashboard at :8080/dashboard
-      - "--api.dashboard=true"
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.node-rpc-router.address=:9933"
-      - "--entrypoints.node-ws-router.address=:9944"
+      - --accesslog
+      - --log.level=DEBUG
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.websecure.http.tls.certResolver=leresolver
+      - --entrypoints.websecure.http.tls.domains[0].main=jackblock.network
+      - --entrypoints.websecure.http.tls.domains[0].sans=rpc.jackblock.network,www.jackblock.network
+      - --certificatesResolvers.leresolver.acme.email=tomasz@kopacki.net
+      - --certificatesResolvers.leresolver.acme.storage=/acme.json
+      - --certificatesResolvers.leresolver.acme.tlschallenge=true
     ports:
       - "80:80"
-      # The Web UI (enabled by --api.insecure=true)
-      - "8080:8080"
+      - "443:443"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
-
-
-  whoami:
-    image: "traefik/whoami"
-    container_name: "simple-service"
-    labels:
-      - "traefik.enable=true"
-      # HTTPS
-      - traefik.http.routers.whoami-secure.rule=Path(`/whoami`)
-      - traefik.http.routers.whoami-secure.tls=true
-      - traefik.http.routers.whoami-secure.entrypoints=websecure
-      # HTTP
-      - traefik.http.routers.whoami.rule=Path(`/whoami`)
-      - traefik.http.routers.whoami.entrypoints=web
-      # HTTP -> HTTPS redirect
-      - traefik.http.routers.whoami.middlewares=redirect-web-secure
-      # HTTP -> HTTPS permanent redirect
-      - traefik.http.middlewares.redirect-web-secure.redirectscheme.scheme=https
-
+      - "./acme.json:/acme.json"
 volumes:
   data:
