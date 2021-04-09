@@ -11,6 +11,9 @@ Jackblock testnet is available here: [jackblock.network](http://jackblock.networ
 - Each player who bet some correct numbers, would be rewarded accordignly. All split rules are available here [Session pot split rules](https://github.com/korzewski/jackblock/wiki/Jackblock-session-pot-split-rules)
 - Additionally each winner would get a **dynamic NFT with a unique image representation**!
 
+### DAPP - Interface preview (in progress)
+![alt text](https://github.com/korzewski/jackblock/blob/master/readme-files/dapp_interface.png?raw=true)
+
 ### High level architecture diagram
 
 ![alt text](https://github.com/korzewski/jackblock/blob/master/readme-files/high_level_architecture_diagram.jpg?raw=true)
