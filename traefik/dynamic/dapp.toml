@@ -1,0 +1,27 @@
+[http]
+
+  [http.routers]
+    [http.routers.dapp]
+      entryPoints = ["websecure", "web"]
+      middlewares = ["dapp-nonwww"]
+      service = "dappInterface"
+      rule = "Host(`jackblock.network`, `www.jackblock.network`)"
+      [http.routers.dapp.tls]
+        certResolver = "letsencrypt"
+        [[http.routers.dapp.tls.domains]]
+          main = "www.jackblock.network"
+          sans = ["jackblock.network"]
+
+  [http.services]
+    [http.services.dappInterface.loadBalancer]
+      [[http.services.dappInterface.loadBalancer.servers]]
+        # S3 bucket
+        url = "http://www.jackblock.network.s3-website-ap-southeast-2.amazonaws.com/"
+      [http.services.dappInterface.loadBalancer.sticky]
+        [http.services.dappInterface.loadBalancer.sticky.cookie]
+
+  [http.middlewares]
+    # Redirect to https
+    [http.middlewares.dapp-nonwww.redirectScheme]
+      scheme = "https"
+      permanent = true

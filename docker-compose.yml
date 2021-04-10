@@ -3,6 +3,7 @@ version: '3.7'
 services:
   jackblock-node:
     image: tkodckr/jackblock-node:latest
+    container_name: "jackblock-node"
     restart: always
     ports:
       - "30333:30333"
@@ -13,7 +14,7 @@ services:
     labels:
       - traefik.enable=true
       # RPC
-      - traefik.http.routers.rpc.rule=Host(`rpc.jackblock.network`) && Path(`/`)
+      - traefik.http.routers.rpc.rule=Host(`rpc.jackblock.network`)
       - traefik.http.routers.rpc.entrypoints=websecure
       - traefik.http.routers.rpc.tls=true
       # Certificates RPC
@@ -23,14 +24,17 @@ services:
       - traefik.http.routers.rpc.service=svc-rpc
 
       # WSS
-      - traefik.http.routers.ws.rule=Host(`rpc.jackblock.network`) && Path(`/ws`)
+      - traefik.http.routers.ws.rule=Host(`ws.jackblock.network`)
       - traefik.http.routers.ws.entrypoints=websecure
       - traefik.http.routers.ws.tls=true
       # Certificates WSS
       - traefik.http.routers.ws.tls.certresolver=leresolver
-      - traefik.http.routers.ws.tls.domains[0].main=rpc.jackblock.network
+      - traefik.http.routers.ws.tls.domains[0].main=ws.jackblock.network
       - traefik.http.services.svc-ws.loadbalancer.server.port=9944
       - traefik.http.routers.ws.service=svc-ws
+      - traefik.http.routers.ws.middlewares=sslheader
+      - traefik.http.middlewares.sslheader.headers.customrequestheaders.X-Forwarded-Proto=wss,https
+      - traefik.http.middlewares.sslheader.headers.customrequestheaders.X-Forwarded-Ssl=on
 
     entrypoint: node-template
     # command for the boot node
@@ -42,16 +46,22 @@ services:
   traefik:
     image: "traefik:2.4.8"
     container_name: "traefik"
+    restart: always
+    depends_on:
+      - "jackblock-node"
     command:
       - --accesslog
       - --log.level=DEBUG
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
+      - --providers.file.directory=/etc/traefik/dynamic
+      - --providers.file.watch=true
       - --entrypoints.web.address=:80
       - --entrypoints.websecure.address=:443
+      - --entryPoints.websecure.forwardedHeaders.insecure=true
       - --entrypoints.websecure.http.tls.certResolver=leresolver
       - --entrypoints.websecure.http.tls.domains[0].main=jackblock.network
-      - --entrypoints.websecure.http.tls.domains[0].sans=rpc.jackblock.network,www.jackblock.network
+      - --entrypoints.websecure.http.tls.domains[0].sans=rpc.jackblock.network,ws.jackblock.network,www.jackblock.network
       - --certificatesResolvers.leresolver.acme.email=tomasz@kopacki.net
       - --certificatesResolvers.leresolver.acme.storage=/acme.json
       - --certificatesResolvers.leresolver.acme.tlschallenge=true
@@ -61,5 +71,7 @@ services:
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
       - "./acme.json:/acme.json"
+      - "./traefik/dynamic:/etc/traefik/dynamic"
+
 volumes:
   data:
