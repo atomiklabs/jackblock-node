@@ -125,5 +125,5 @@ public-node-start:
 	--name $(NAME) \
 
 public-node-add-keys:
-	curl http://localhost:$(RPC_PORT_0) -H "Content-Type:application/json;charset=utf-8" -d "@$(KEYS_PATH_PREFIX)/private-key-aura.json" && \
-	curl http://localhost:$(RPC_PORT_0) -H "Content-Type:application/json;charset=utf-8" -d "@$(KEYS_PATH_PREFIX)/private-key-grandpa.json"
+	curl https://rpc.jackblock.network -H "Content-Type:application/json;charset=utf-8" -d "@$(KEYS_PATH_PREFIX)/private-key-aura.json" && \
+	curl https://rpc.jackblock.network -H "Content-Type:application/json;charset=utf-8" -d "@$(KEYS_PATH_PREFIX)/private-key-grandpa.json"

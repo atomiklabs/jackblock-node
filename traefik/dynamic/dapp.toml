@@ -1,0 +1,30 @@
+[http]
+
+  [http.routers]
+    [http.routers.dappSecure]
+      entryPoints = ["websecure"]
+      service = "dappInterface"
+      rule = "Host(`jackblock.network`, `www.jackblock.network`)"
+      [http.routers.dappSecure.tls]
+        certResolver = "leresolver"
+        [[http.routers.dapp.tls.domains]]
+          main = "www.jackblock.network"
+          sans = ["jackblock.network"]
+
+    [http.routers.dapp]
+      entryPoints = ["web"]
+      rule = "Host(`jackblock.network`) `www.jackblock.network`)"
+      middlewares = ["httpToHttps"]
+
+  [http.services]
+    [http.services.dappInterface.loadBalancer]
+      [[http.services.dappInterface.loadBalancer.servers]]
+        url = "http://www.jackblock.network.s3-website-ap-southeast-2.amazonaws.com/"
+      [http.services.dappInterface.loadBalancer.sticky]
+        [http.services.dappInterface.loadBalancer.sticky.cookie]
+
+  [http.middlewares]
+    # Redirect to https
+    [http.middlewares.httpToHttps.redirectScheme]
+      scheme = "https"
+      permanent = true
