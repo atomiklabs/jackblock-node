@@ -462,7 +462,7 @@ impl<T: Config> Module<T> {
 	}
 
 	fn fetch_nft_hash(nft_request_data: NFTRequestDataOf<T>) -> Result<Vec<u8>, Error<T>> {
-		const HTTP_REMOTE_REQUEST: &str = "http://localhost:3000/api/create-erc721-metadata";
+		const HTTP_REMOTE_REQUEST: &str = "http://svg-bonanza:3000/api/create-erc721-metadata";
 		const FETCH_TIMEOUT_PERIOD: u64 = 15_000;
 
 		let reward = TryInto::<u128>::try_into(nft_request_data.reward).unwrap_or(0);

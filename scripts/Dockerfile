@@ -14,9 +14,21 @@ FROM debian:buster-slim
 LABEL description="This is the 2nd stage: a very small image where we copy the Jackblock binary."
 ARG PROFILE=release
 
-RUN useradd -m -u 1000 -U -s /bin/sh -d /substrate substrate && \
+# install tools and dependencies
+RUN apt-get update && \
+	DEBIAN_FRONTEND=noninteractive apt-get upgrade -y && \
+	DEBIAN_FRONTEND=noninteractive apt-get install -y \
+		curl && \
+	# apt cleanup
+	apt-get autoremove -y && \
+	apt-get clean && \
+	find /var/lib/apt/lists/ -type f -not -name lock -delete; \
+	# add user and create its home directory
+	useradd -m -u 1000 -U -s /bin/sh -d /substrate substrate && \
 	mkdir -p /substrate/.local/share/substrate && \
+	# make sure the user has correct rights
 	chown -R substrate:substrate /substrate/.local && \
+	# make sure whatever the substrate state is, it's going to be available to export via volume
 	ln -s /substrate/.local/share/substrate /data
 
 COPY --from=builder /substrate/target/$PROFILE/node-template /usr/local/bin
