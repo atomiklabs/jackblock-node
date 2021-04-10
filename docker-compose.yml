@@ -5,6 +5,8 @@ services:
     image: tkodckr/jackblock-node:latest
     container_name: "jackblock-node"
     restart: always
+    depends_on:
+      - "svg-bonanza"
     ports:
       - "30333:30333"
       - "9933:9933"
@@ -42,6 +44,28 @@ services:
     # command for every other node
     # command: -lruntime=debug --rpc-external --ws-external --chain public --port 30333 --rpc-port 9933 --ws-port 9944 --validator --rpc-cors all --rpc-methods Unsafe --bootnodes /ip4/54.253.234.233/tcp/30333/p2p/12D3KooWGkcu5myAw1TNDJMjaQr9pYisEuEkxg3USH5VARSXoYFK --no-mdns --name jackblock-node-rafal --telemetry-url 'wss://telemetry.polkadot.io/submit/ 0'
 
+  
+  svg-bonanza:
+    image: tkodckr/svg-bonanza:latest
+    container_name: "svg-bonanza"
+    restart: always
+    env_file: svg-bonanza.env
+    ports:
+      - "3000:3000"
+    labels:
+      - traefik.enable=true
+      # API
+      - traefik.http.routers.svgBonanza.rule=Host(`svg-bonanza.jackblock.network`)
+      - traefik.http.routers.svgBonanza.entrypoints=websecure
+      - traefik.http.routers.svgBonanza.tls=true
+      # Certificates WSS
+      - traefik.http.routers.svgBonanza.tls.certresolver=leresolver
+      - traefik.http.routers.svgBonanza.tls.domains[0].main=svg-bonanza.jackblock.network
+      - traefik.http.services.svc-svgBonanza.loadbalancer.server.port=3000
+      - traefik.http.routers.svgBonanza.service=svc-svgBonanza
+      - traefik.http.routers.svgBonanza.middlewares=sslheader
+      - traefik.http.middlewares.sslheader.headers.customrequestheaders.X-Forwarded-Proto=wss,https
+      - traefik.http.middlewares.sslheader.headers.customrequestheaders.X-Forwarded-Ssl=on
 
   traefik:
     image: "traefik:2.4.8"
@@ -49,6 +73,7 @@ services:
     restart: always
     depends_on:
       - "jackblock-node"
+      - "svg-bonanza"
     command:
       - --accesslog
       - --log.level=DEBUG

@@ -63,7 +63,7 @@ async function generateSvgMarkup({
   }).format(reward);
 
   const svgTemplateFileBuffer = await fs.promises.readFile(
-    path.resolve('src', 'assets', 'nft-template.svg')
+    path.resolve('public', 'nft-template.svg')
   );
 
   const svgTemplate = svgTemplateFileBuffer.toString('utf8');
