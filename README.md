@@ -2,7 +2,7 @@
 Jackblock is a **lottery game** build in [Substrate](https://www.substrate.io/) for [Polkadot ecosystem](https://polkadot.network/).
 Players can be rewarded with extra **coins** and **dynamic NFT's with a unique image representation!** hosted on **IPFS**.
 
-Jackblock testnet is available here: [jackblock.network](http://jackblock.network)
+Jackblock testnet is available here: [https://www.jackblock.network](https://www.jackblock.network)
 
 ### Rules in a nutshell
 - To participate in the game, **player can bet 6 numbers** within a range **1 - 10**
