@@ -1,3 +1,5 @@
+# This configuration is meant for testnet purposes
+
 version: '3.7'
 
 services:
@@ -5,6 +7,7 @@ services:
     image: tkodckr/jackblock-node:latest
     container_name: "jackblock-node"
     restart: always
+    env_file: ../.env
     depends_on:
       - "svg-bonanza"
     ports:
@@ -40,7 +43,21 @@ services:
 
     entrypoint: node-template
     # command for the boot node
-    command: -lruntime=debug --rpc-external --ws-external --chain public --port 30333 --rpc-port 9933 --ws-port 9944 --validator --rpc-cors all --rpc-methods Unsafe --no-mdns --name jackblock-node-tko --telemetry-url 'wss://telemetry.polkadot.io/submit/ 0' --node-key 36b2372af482746a4ddb6d5755f77c8487d7b92cf479a1dc84935ac071deadb4
+    command: 
+      - -lruntime=debug
+      - --rpc-external
+      - --ws-external
+      - --chain public
+      - --port 30333
+      - --rpc-port 9933
+      - --ws-port 9944
+      - --validator
+      - --rpc-cors all
+      - --rpc-methods Unsafe
+      - --no-mdns
+      - --name jackblock-node-tko
+      - --telemetry-url 'wss://telemetry.polkadot.io/submit/ 0'
+      - --node-key 36b2372af482746a4ddb6d5755f77c8487d7b92cf479a1dc84935ac071deadb4
     # command for every other node
     # command: -lruntime=debug --rpc-external --ws-external --chain public --port 30333 --rpc-port 9933 --ws-port 9944 --validator --rpc-cors all --rpc-methods Unsafe --bootnodes /ip4/54.253.234.233/tcp/30333/p2p/12D3KooWGkcu5myAw1TNDJMjaQr9pYisEuEkxg3USH5VARSXoYFK --no-mdns --name jackblock-node-rafal --telemetry-url 'wss://telemetry.polkadot.io/submit/ 0'
 
@@ -49,7 +66,7 @@ services:
     image: tkodckr/svg-bonanza:latest
     container_name: "svg-bonanza"
     restart: always
-    env_file: svg-bonanza.env
+    env_file: ../.env
     ports:
       - "3000:3000"
 
@@ -65,7 +82,7 @@ services:
       - --log.level=DEBUG
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
-      - --providers.file.directory=/etc/traefik/dynamic
+      - --providers.file.filename=/etc/traefik/dynamic/dapp.testnet.toml
       - --providers.file.watch=true
       - --entrypoints.web.address=:80
       - --entrypoints.websecure.address=:443

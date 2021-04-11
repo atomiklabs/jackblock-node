@@ -1,0 +1,47 @@
+[http]
+  [http.routers]
+    [http.routers.dappSecureWww]
+      entryPoints = ["websecure"]
+      service = "dappInterface"
+      rule = "Host(`www.dev.localhost`)"
+      [http.routers.dappSecureWww.tls]
+        certResolver = "leresolver"
+        [[http.routers.dappSecureWww.tls.domains]]
+          main = "www.dev.localhost"
+
+    [http.routers.dappSecureNonWww]
+      entryPoints = ["websecure"]
+      service = "dappInterface"
+      rule = "Host(`dev.localhost`)"
+      middlewares = ["to-www"]
+
+    [http.routers.dappNonWww]
+      entryPoints = ["web"]
+      service = "dappInterface"
+      rule = "Host(`dev.localhost`)"
+      middlewares = ["to-www", "to-https"]
+
+    [http.routers.dappWww]
+      entryPoints = ["web"]
+      service = "dappInterface"
+      rule = "Host(`www.dev.localhost`)"
+      middlewares = ["to-https"]
+
+  [http.middlewares]
+    # Redirect to https
+    [http.middlewares.to-https.redirectScheme]
+      scheme = "https"
+      permanent = "true"
+    
+    # Redirect to WWW
+    [http.middlewares.to-www.redirectRegex]
+      regex = "^https?://dev.localhost(.*)"
+      replacement = "https://www.dev.localhost${1}"
+      permanent = "true"
+
+  [http.services]
+    [http.services.dappInterface.loadBalancer]
+      [[http.services.dappInterface.loadBalancer.servers]]
+        url = "http://dev.localhost:5000/build/index.html"
+      [http.services.dappInterface.loadBalancer.sticky]
+        [http.services.dappInterface.loadBalancer.sticky.cookie]

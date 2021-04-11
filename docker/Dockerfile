@@ -33,9 +33,13 @@ RUN apt-get update && \
 
 COPY --from=builder /substrate/target/$PROFILE/node-template /usr/local/bin
 
-# checks
+# check if the node binary is healthy
 RUN ldd /usr/local/bin/node-template && \
 	/usr/local/bin/node-template --version
+
+# add docker-entrypoint
+COPY ./docker-entrypoint.sh /usr/local/bin
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 USER substrate
 
@@ -46,4 +50,5 @@ USER substrate
 EXPOSE 30333 9933 9944 9615
 VOLUME ["/data"]
 
-CMD ["/usr/local/bin/node-template"]
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+CMD ["--dev"]
