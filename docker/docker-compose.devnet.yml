@@ -1,0 +1,106 @@
+# This configuration is meant for development purposes
+
+version: '3.7'
+
+services:
+  jackblock-node:
+    image: tkodckr/jackblock-node:latest
+    container_name: "jackblock-node"
+    restart: always
+    env_file: ../.env
+    depends_on:
+      - "svg-bonanza"
+    ports:
+      - "30333:30333"
+      - "9933:9933"
+      - "9944:9944"
+    volumes:
+      - "data:/data"
+    labels:
+      - traefik.enable=true
+      # RPC
+      - traefik.http.routers.rpc.rule=Host(`rpc.dev.localhost`)
+      - traefik.http.routers.rpc.entrypoints=websecure
+      - traefik.http.routers.rpc.tls=true
+      # Certificates RPC
+      - traefik.http.routers.rpc.tls.certresolver=leresolver
+      - traefik.http.routers.rpc.tls.domains[0].main=rpc.dev.localhost
+      - traefik.http.services.svc-rpc.loadbalancer.server.port=9933
+      - traefik.http.routers.rpc.service=svc-rpc
+
+      # WSS
+      - traefik.http.routers.ws.rule=Host(`ws.dev.localhost`)
+      - traefik.http.routers.ws.entrypoints=websecure
+      - traefik.http.routers.ws.tls=true
+      # Certificates WSS
+      - traefik.http.routers.ws.tls.certresolver=leresolver
+      - traefik.http.routers.ws.tls.domains[0].main=ws.dev.localhost
+      - traefik.http.services.svc-ws.loadbalancer.server.port=9944
+      - traefik.http.routers.ws.service=svc-ws
+      - traefik.http.routers.ws.middlewares=sslheader
+      - traefik.http.middlewares.sslheader.headers.customrequestheaders.X-Forwarded-Proto=wss,https
+      - traefik.http.middlewares.sslheader.headers.customrequestheaders.X-Forwarded-Ssl=on
+
+    entrypoint: node-template
+    # command for the boot node
+    command: -lruntime=debug --dev --alice --port 30333 --rpc-port 9933 --ws-port 9944 --name jackblock-node-dev --telemetry-url 'wss://telemetry.polkadot.io/submit/ 0'
+    # command for every other node
+    # command: -lruntime=debug --rpc-external --ws-external --chain public --port 30333 --rpc-port 9933 --ws-port 9944 --validator --rpc-cors all --rpc-methods Unsafe --bootnodes /ip4/54.253.234.233/tcp/30333/p2p/12D3KooWGkcu5myAw1TNDJMjaQr9pYisEuEkxg3USH5VARSXoYFK --no-mdns --name jackblock-node-rafal --telemetry-url 'wss://telemetry.polkadot.io/submit/ 0'
+
+  
+  svg-bonanza:
+    image: tkodckr/svg-bonanza:latest
+    container_name: "svg-bonanza"
+    restart: always
+    env_file: ../.env
+    ports:
+      - "3000:3000"
+
+
+  dapp-interface:
+    image: tkodckr/dapp-interface:latest
+    container_name: "dapp-interface"
+    restart: always
+    ports:
+      - "5000:5000"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.dapp-interface-dev.rule=Host(`dapp.dev.localhost`)
+      - traefik.http.services.svc-dapp-interface-dev.loadbalancer.server.port=5000
+      - traefik.http.routers.dapp-interface-dev.service=svc-dapp-interface-dev
+
+  traefik:
+    image: "traefik:2.4.8"
+    container_name: "traefik"
+    restart: always
+    depends_on:
+      - "jackblock-node"
+      - "svg-bonanza"
+    command:
+      - --accesslog
+      - --log.level=DEBUG
+      - --api.insecure=true
+      - --api.dashboard=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.file.filename=/etc/traefik/dynamic/dapp.devnet.toml
+      - --providers.file.watch=true
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --entryPoints.websecure.forwardedHeaders.insecure=true
+      - --entrypoints.websecure.http.tls.certResolver=leresolver
+      - --entrypoints.websecure.http.tls.domains[0].main=dev.localhost
+      - --entrypoints.websecure.http.tls.domains[0].sans=rpc.dev.localhost,ws.dev.localhost,www.dev.localhost
+      - --certificatesResolvers.leresolver.acme.email=tomasz@kopacki.net
+      - --certificatesResolvers.leresolver.acme.storage=/acme.json
+      - --certificatesResolvers.leresolver.acme.tlschallenge=true
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "./acme.json:/acme.json"
+      - "./traefik/dynamic:/etc/traefik/dynamic"
+
+volumes:
+  data:

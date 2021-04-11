@@ -2,9 +2,9 @@
 
 set -e
 
-echo "*** Start Substrate node template ***"
+ENTRYPOINT="${NODE_BIN_PATH:-'/usr/local/bin/node-template'}"
 
-cd $(dirname ${BASH_SOURCE[0]})/..
+echo "Launching ${ENTRYPOINT} $@"
 
-docker-compose down --remove-orphans
-docker-compose run --rm --service-ports dev $@
+exec $ENTRYPOINT $@
+

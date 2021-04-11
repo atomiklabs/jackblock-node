@@ -1,3 +1,5 @@
+# This configuration is meant for testnet purposes
+
 version: '3.7'
 
 services:
@@ -80,7 +82,7 @@ services:
       - --log.level=DEBUG
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
-      - --providers.file.directory=/etc/traefik/dynamic
+      - --providers.file.filename=/etc/traefik/dynamic/dapp.testnet.toml
       - --providers.file.watch=true
       - --entrypoints.web.address=:80
       - --entrypoints.websecure.address=:443
