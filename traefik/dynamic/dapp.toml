@@ -1,20 +1,43 @@
 [http]
-
   [http.routers]
-    [http.routers.dappSecure]
+    [http.routers.dappSecureWww]
       entryPoints = ["websecure"]
       service = "dappInterface"
-      rule = "Host(`jackblock.network`, `www.jackblock.network`)"
-      [http.routers.dappSecure.tls]
+      rule = "Host(`www.jackblock.network`)"
+      [http.routers.dappSecureWww.tls]
         certResolver = "leresolver"
-        [[http.routers.dapp.tls.domains]]
+        [[http.routers.dappSecureWww.tls.domains]]
           main = "www.jackblock.network"
-          sans = ["jackblock.network"]
 
-    [http.routers.dapp]
+    [http.routers.dappSecureNonWww]
+      entryPoints = ["websecure"]
+      service = "dappInterface"
+      rule = "Host(`jackblock.network`)"
+      middlewares = ["to-www"]
+
+    [http.routers.dappNonWww]
       entryPoints = ["web"]
-      rule = "Host(`jackblock.network`) `www.jackblock.network`)"
-      middlewares = ["httpToHttps"]
+      service = "dappInterface"
+      rule = "Host(`jackblock.network`)"
+      middlewares = ["to-www", "to-https"]
+
+    [http.routers.dappWww]
+      entryPoints = ["web"]
+      service = "dappInterface"
+      rule = "Host(`www.jackblock.network`)"
+      middlewares = ["to-https"]
+
+  [http.middlewares]
+    # Redirect to https
+    [http.middlewares.to-https.redirectScheme]
+      scheme = "https"
+      permanent = "true"
+    
+    # Redirect to WWW
+    [http.middlewares.to-www.redirectRegex]
+      regex = "^https?://jackblock.network(.*)"
+      replacement = "https://www.jackblock.network${1}"
+      permanent = "true"
 
   [http.services]
     [http.services.dappInterface.loadBalancer]
@@ -22,9 +45,3 @@
         url = "http://www.jackblock.network.s3-website-ap-southeast-2.amazonaws.com/"
       [http.services.dappInterface.loadBalancer.sticky]
         [http.services.dappInterface.loadBalancer.sticky.cookie]
-
-  [http.middlewares]
-    # Redirect to https
-    [http.middlewares.httpToHttps.redirectScheme]
-      scheme = "https"
-      permanent = true

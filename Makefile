@@ -124,6 +124,19 @@ public-node-start:
 	--no-mdns \
 	--name $(NAME) \
 
-public-node-add-keys:
-	curl https://rpc.jackblock.network -H "Content-Type:application/json;charset=utf-8" -d "@$(KEYS_PATH_PREFIX)/private-key-aura.json" && \
-	curl https://rpc.jackblock.network -H "Content-Type:application/json;charset=utf-8" -d "@$(KEYS_PATH_PREFIX)/private-key-grandpa.json"
+miko-public-node-add-keys:
+	curl 3.26.29.2:9933 -H "Content-Type:application/json;charset=utf-8" -d "@$(KEYS_PATH_PREFIX)/miko-private-key-aura.json" && \
+	curl 3.26.29.2:9933 -H "Content-Type:application/json;charset=utf-8" -d "@$(KEYS_PATH_PREFIX)/miko-private-key-jack.json" && \
+	curl 3.26.29.2:9933 -H "Content-Type:application/json;charset=utf-8" -d "@$(KEYS_PATH_PREFIX)/miko-private-key-grandpa.json"
+
+rafal-public-node-add-keys:
+	curl 3.26.68.127:9933 -H "Content-Type:application/json;charset=utf-8" -d "@$(KEYS_PATH_PREFIX)/rafal-private-key-aura.json" && \
+	curl 3.26.68.127:9933 -H "Content-Type:application/json;charset=utf-8" -d "@$(KEYS_PATH_PREFIX)/rafal-private-key-jack.json" && \
+	curl 3.26.68.127:9933 -H "Content-Type:application/json;charset=utf-8" -d "@$(KEYS_PATH_PREFIX)/rafal-private-key-grandpa.json"
+
+tomek-public-node-add-keys:
+	curl 54.253.234.233:9933 -H "Content-Type:application/json;charset=utf-8" -d "@$(KEYS_PATH_PREFIX)/tomek-private-key-aura.json" && \
+	curl 54.253.234.233:9933 -H "Content-Type:application/json;charset=utf-8" -d "@$(KEYS_PATH_PREFIX)/tomek-private-key-jack.json" && \
+	curl 54.253.234.233:9933 -H "Content-Type:application/json;charset=utf-8" -d "@$(KEYS_PATH_PREFIX)/tomek-private-key-grandpa.json"
+
+all-public-node-add-keys: tomek-public-node-add-keys rafal-public-node-add-keys miko-public-node-add-keys
