@@ -2,25 +2,25 @@
 Jackblock is a **lottery game** build in [Substrate](https://www.substrate.io/) for [Polkadot ecosystem](https://polkadot.network/).
 Players can be rewarded with extra **coins** and **dynamic NFT's with a unique image representation!** hosted on **IPFS**.
 
-Jackblock testnet is available here: [https://www.jackblock.network](https://www.jackblock.network)
+Our dApp for Jackblock testnet is available here: [jackblock.network](https://www.jackblock.network)
 
 ### Rules in a nutshell
-- To participate in the game, **player can bet 6 numbers** within a range **1 - 10**
+- To participate in the game, **player can bet 6 numbers** within a range **1 - 10** (the target range for mainnet deployment will be way wider — it might be **1-49** for production use case)
 - Each **bet costs 1 coin** and it's transfered to shared **session pot**
 - Session is closed **every 5 blocks**, then **6 magic numbers are announced**
 - Each player who bet some correct numbers, would be rewarded accordignly. All split rules are available here [Session pot split rules](https://github.com/korzewski/jackblock/wiki/Jackblock-session-pot-split-rules)
 - Additionally each winner would get a **dynamic NFT with a unique image representation**!
 
 ### DAPP - Interface preview (in progress)
-![alt text](https://github.com/korzewski/jackblock/blob/master/readme-files/dapp_interface.png?raw=true)
+![DAPP - Interface preview](./readme-files/dapp_interface.png?raw=true)
 
 ### High level architecture diagram
 
-![alt text](https://github.com/korzewski/jackblock/blob/master/readme-files/high_level_architecture_diagram.jpg?raw=true)
+![High level architecture diagram](./readme-files/high_level_architecture_diagram.jpg?raw=true)
 
 ### Blockchain architecture diagram
 
-![alt text](https://github.com/korzewski/jackblock/blob/master/readme-files/jackblock_architecture.jpg?raw=true)
+![Blockchain architecture diagram](./readme-files/jackblock_architecture.jpg?raw=true)
 
 ### (Option 1) Start substrate development blockchain
 - Make sure you have installed everything for substrate development https://substrate.dev/docs/en/knowledgebase/getting-started/
