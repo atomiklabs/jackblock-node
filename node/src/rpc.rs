@@ -14,6 +14,24 @@ use sp_block_builder::BlockBuilder;
 pub use sc_rpc_api::DenyUnsafe;
 use sp_transaction_pool::TransactionPool;
 
+use sc_finality_grandpa::{
+	SharedVoterState, SharedAuthoritySet, FinalityProofProvider, GrandpaJustificationStream
+};
+use sc_finality_grandpa_rpc::GrandpaRpcHandler;
+
+/// Extra dependencies for GRANDPA
+pub struct GrandpaDeps<B> {
+	/// Voting round info.
+	pub shared_voter_state: SharedVoterState,
+	/// Authority set info.
+	pub shared_authority_set: SharedAuthoritySet<Hash, BlockNumber>,
+	/// Receives notifications about justification events from Grandpa.
+	pub justification_stream: GrandpaJustificationStream<Block>,
+	/// Executor to drive the subscription manager in the Grandpa RPC handler.
+	pub subscription_executor: SubscriptionTaskExecutor,
+	/// Finality proof provider.
+	pub finality_provider: Arc<FinalityProofProvider<B, Block>>,
+}
 
 /// Full client dependencies.
 pub struct FullDeps<C, P> {
@@ -23,6 +41,8 @@ pub struct FullDeps<C, P> {
 	pub pool: Arc<P>,
 	/// Whether to deny unsafe calls
 	pub deny_unsafe: DenyUnsafe,
+	/// GRANDPA specific dependencies.
+	pub grandpa: GrandpaDeps<B>,
 }
 
 /// Instantiate all full RPC extensions.
@@ -45,7 +65,16 @@ pub fn create_full<C, P>(
 		client,
 		pool,
 		deny_unsafe,
+		grandpa,
 	} = deps;
+
+	let GrandpaDeps {
+		shared_voter_state,
+		shared_authority_set,
+		justification_stream,
+		subscription_executor,
+		finality_provider,
+	} = grandpa;
 
 	io.extend_with(
 		SystemApi::to_delegate(FullSystem::new(client.clone(), pool, deny_unsafe))
@@ -53,6 +82,18 @@ pub fn create_full<C, P>(
 
 	io.extend_with(
 		TransactionPaymentApi::to_delegate(TransactionPayment::new(client.clone()))
+	);
+
+	io.extend_with(
+		sc_finality_grandpa_rpc::GrandpaApi::to_delegate(
+			GrandpaRpcHandler::new(
+				shared_authority_set.clone(),
+				shared_voter_state,
+				justification_stream,
+				subscription_executor,
+				finality_provider,
+			)
+		)
 	);
 
 	// Extend this RPC with a custom API by using the following syntax.
