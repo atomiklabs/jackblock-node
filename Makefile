@@ -125,14 +125,14 @@ public-node-start:
 	--name $(NAME) \
 
 miko-public-node-add-keys:
-	curl 3.26.29.2:9933 -H "Content-Type:application/json;charset=utf-8" -d "@$(KEYS_PATH_PREFIX)/miko-private-key-aura.json" && \
-	curl 3.26.29.2:9933 -H "Content-Type:application/json;charset=utf-8" -d "@$(KEYS_PATH_PREFIX)/miko-private-key-jack.json" && \
-	curl 3.26.29.2:9933 -H "Content-Type:application/json;charset=utf-8" -d "@$(KEYS_PATH_PREFIX)/miko-private-key-grandpa.json"
+	curl 13.211.127.137:9933 -H "Content-Type:application/json;charset=utf-8" -d "@$(KEYS_PATH_PREFIX)/miko-private-key-aura.json" && \
+	curl 13.211.127.137:9933 -H "Content-Type:application/json;charset=utf-8" -d "@$(KEYS_PATH_PREFIX)/miko-private-key-jack.json" && \
+	curl 13.211.127.137:9933 -H "Content-Type:application/json;charset=utf-8" -d "@$(KEYS_PATH_PREFIX)/miko-private-key-grandpa.json"
 
 rafal-public-node-add-keys:
-	curl 3.26.68.127:9933 -H "Content-Type:application/json;charset=utf-8" -d "@$(KEYS_PATH_PREFIX)/rafal-private-key-aura.json" && \
-	curl 3.26.68.127:9933 -H "Content-Type:application/json;charset=utf-8" -d "@$(KEYS_PATH_PREFIX)/rafal-private-key-jack.json" && \
-	curl 3.26.68.127:9933 -H "Content-Type:application/json;charset=utf-8" -d "@$(KEYS_PATH_PREFIX)/rafal-private-key-grandpa.json"
+	curl 54.79.140.220:9933 -H "Content-Type:application/json;charset=utf-8" -d "@$(KEYS_PATH_PREFIX)/rafal-private-key-aura.json" && \
+	curl 54.79.140.220:9933 -H "Content-Type:application/json;charset=utf-8" -d "@$(KEYS_PATH_PREFIX)/rafal-private-key-jack.json" && \
+	curl 54.79.140.220:9933 -H "Content-Type:application/json;charset=utf-8" -d "@$(KEYS_PATH_PREFIX)/rafal-private-key-grandpa.json"
 
 tomek-public-node-add-keys:
 	curl 54.253.234.233:9933 -H "Content-Type:application/json;charset=utf-8" -d "@$(KEYS_PATH_PREFIX)/tomek-private-key-aura.json" && \
