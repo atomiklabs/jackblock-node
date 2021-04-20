@@ -213,6 +213,9 @@ decl_module! {
 		fn offchain_worker(block_number: T::BlockNumber) {
 			// TODO - set offchain worker lock to do not start twice for the same session
 			if let Some(session_id) = Self::closed_not_finalised_session() {
+				debug::RuntimeLogger::init();
+				debug::info!("--- offchain_worker start block_number: {:?}, session_id: {}", block_number, session_id);
+
 				if let Err(error) = Self::generate_session_numbers_and_send(block_number, session_id) {
 					debug::RuntimeLogger::init();
 					debug::info!("--- offchain_worker error: {}", error);
@@ -249,6 +252,9 @@ decl_module! {
 
 		#[weight = 10_000]
 		pub fn add_nft_hash_to_winner(origin, nft_request_data: NFTRequestDataOf<T>, payload: NftHashPayload<T::Public>, _singature: T::Signature) {
+			debug::RuntimeLogger::init();
+			debug::info!("--- extrinsic add_nft_hash_to_winner");
+
 			ensure_none(origin)?;
 
 			let mut pending_winners = Self::pending_winners_nft();
@@ -271,6 +277,9 @@ decl_module! {
 
 		#[weight = 10_000]
 		pub fn finalize_the_session(origin, payload: SessionNumbersPayload<T::Public, T::BlockNumber>, _singature: T::Signature) {
+			debug::RuntimeLogger::init();
+			debug::info!("--- extrinsic finalize_the_session");
+
 			ensure_none(origin)?;
 
 			ClosedNotFinalisedSessionId::try_mutate(|x| -> DispatchResult {
@@ -292,7 +301,6 @@ decl_module! {
 
 			Self::deposit_event(RawEvent::SessionResults(payload.session_id, payload.session_numbers, winners.clone()));
 
-			debug::RuntimeLogger::init();
 			debug::info!("--- Finalize_the_session: {}", payload.session_id);
 			debug::info!("--- Session_numbers: {:?}", payload.session_numbers);
 			debug::info!("--- Winners: {:?}", winners);
@@ -462,7 +470,7 @@ impl<T: Config> Module<T> {
 	}
 
 	fn fetch_nft_hash(nft_request_data: NFTRequestDataOf<T>) -> Result<Vec<u8>, Error<T>> {
-		const HTTP_REMOTE_REQUEST: &str = "http://svg-bonanza:3000/api/create-erc721-metadata";
+		const HTTP_REMOTE_REQUEST: &str = "http://localhost:3000/api/create-erc721-metadata";
 		const FETCH_TIMEOUT_PERIOD: u64 = 15_000;
 
 		let reward = TryInto::<u128>::try_into(nft_request_data.reward).unwrap_or(0);
@@ -571,6 +579,8 @@ impl<T: Config> ValidateUnsigned for Module<T> {
 
 				return ValidTransaction::with_tag_prefix("JackBlock/validate_unsigned/finalize_the_session")
 					.priority(UNSIGNED_TX_PRIORITY)
+					.and_provides(account_id)
+					.and_provides(payload.session_id)
 					.longevity(5)
 					.propagate(true)
 					.build();
@@ -591,6 +601,8 @@ impl<T: Config> ValidateUnsigned for Module<T> {
 
 				return ValidTransaction::with_tag_prefix("JackBlock/validate_unsigned/add_nft_hash_to_winner")
 					.priority(UNSIGNED_TX_PRIORITY)
+					.and_provides(account_id)
+					.and_provides(&payload.nft_hash)
 					.longevity(5)
 					.propagate(true)
 					.build();
