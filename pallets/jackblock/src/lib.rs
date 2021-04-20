@@ -258,9 +258,6 @@ decl_module! {
 
 		#[weight = 10_000]
 		pub fn add_nft_hash_to_winner(origin, nft_request_data: NFTRequestDataOf<T>, payload: NftHashPayload<T::Public>, _singature: T::Signature) {
-			debug::RuntimeLogger::init();
-			debug::info!("--- extrinsic add_nft_hash_to_winner");
-
 			ensure_none(origin)?;
 
 			let mut pending_winners = Self::pending_winners_nft();
@@ -283,9 +280,6 @@ decl_module! {
 
 		#[weight = 10_000]
 		pub fn finalize_the_session(origin, payload: SessionNumbersPayload<T::Public, T::BlockNumber>, _singature: T::Signature) {
-			debug::RuntimeLogger::init();
-			debug::info!("--- extrinsic finalize_the_session");
-
 			ensure_none(origin)?;
 
 			ClosedNotFinalisedSessionId::try_mutate(|x| -> DispatchResult {
@@ -476,27 +470,30 @@ impl<T: Config> Module<T> {
 	}
 
 	fn fetch_nft_hash(nft_request_data: NFTRequestDataOf<T>) -> Result<Vec<u8>, Error<T>> {
-		const HTTP_REMOTE_REQUEST: &str = "http://localhost:3000/api/create-erc721-metadata";
+		let base_url = "http://localhost:3000".to_string();
+		let http_url: &str = &"{BASE_URL}/api/create-erc721-metadata"
+			.to_string()
+			.replace("{BASE_URL}", &base_url);
 		const FETCH_TIMEOUT_PERIOD: u64 = 15_000;
 
 		let reward = TryInto::<u128>::try_into(nft_request_data.reward).unwrap_or(0);
 
 		let request_body = "{
-			\"score\": <SCORE>, 
-			\"scoreOutOf\": <SCORE_OUT_OF>,
-			\"reward\": <REWARD>,
-			\"sessionId\": <SESSION_ID>
+			\"score\": {SCORE}, 
+			\"scoreOutOf\": {SCORE_OUT_OF},
+			\"reward\": {REWARD},
+			\"sessionId\": {SESSION_ID}
 		}"
 			.to_string()
-			.replace("<SCORE>", &nft_request_data.score.to_string())
-			.replace("<SCORE_OUT_OF>", &nft_request_data.score_out_of.to_string())
-			.replace("<REWARD>", &reward.to_string())
-			.replace("<SESSION_ID>", &nft_request_data.session_id.to_string());
+			.replace("{SCORE}", &nft_request_data.score.to_string())
+			.replace("{SCORE_OUT_OF}", &nft_request_data.score_out_of.to_string())
+			.replace("{REWARD}", &reward.to_string())
+			.replace("{SESSION_ID}", &nft_request_data.session_id.to_string());
 
 		let mut request_vector = Vec::new();
 		request_vector.push(request_body.clone());
 
-		let request = rt_offchain::http::Request::post(HTTP_REMOTE_REQUEST, request_vector);
+		let request = rt_offchain::http::Request::post(http_url, request_vector);
 
 		let timeout = sp_io::offchain::timestamp()
 			.add(rt_offchain::Duration::from_millis(FETCH_TIMEOUT_PERIOD));
