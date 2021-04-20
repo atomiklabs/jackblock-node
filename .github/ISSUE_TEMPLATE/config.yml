@@ -2,4 +2,4 @@ blank_issues_enabled: false
 contact_links:
   - name: Todo
     about: Create new todo for jackblock project
-    url: https://github.com/korzewski/jackblock/issues/new?template=todo&projects=atomiklabs/1
+    url: https://github.com/atomiklabs/jackblock/issues/new?template=todo&projects=atomiklabs/1&labels=jackblock
