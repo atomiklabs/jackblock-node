@@ -471,7 +471,7 @@ impl<T: Config> Module<T> {
 
 	fn fetch_nft_hash(nft_request_data: NFTRequestDataOf<T>) -> Result<Vec<u8>, Error<T>> {
 		let base_url = "http://localhost:3000".to_string();
-		let http_url: &str = &"{BASE_URL}/api/create-erc721-metadata"
+		let http_url = "{BASE_URL}/api/create-erc721-metadata"
 			.to_string()
 			.replace("{BASE_URL}", &base_url);
 		const FETCH_TIMEOUT_PERIOD: u64 = 15_000;
@@ -493,7 +493,7 @@ impl<T: Config> Module<T> {
 		let mut request_vector = Vec::new();
 		request_vector.push(request_body.clone());
 
-		let request = rt_offchain::http::Request::post(http_url, request_vector);
+		let request = rt_offchain::http::Request::post(&http_url, request_vector);
 
 		let timeout = sp_io::offchain::timestamp()
 			.add(rt_offchain::Duration::from_millis(FETCH_TIMEOUT_PERIOD));
