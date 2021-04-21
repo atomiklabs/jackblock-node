@@ -45,6 +45,9 @@ use sp_runtime::{
 		Saturating,
 	},
 	offchain as rt_offchain,
+	offchain::{
+		storage_lock::{StorageLock, BlockAndTime},
+	},
 	RuntimeDebug,
 	transaction_validity::{
 		TransactionSource,
@@ -211,18 +214,24 @@ decl_module! {
 		}
 
 		fn offchain_worker(block_number: T::BlockNumber) {
-			// TODO - set offchain worker lock to do not start twice for the same session
+			debug::RuntimeLogger::init();
+
 			if let Some(session_id) = Self::closed_not_finalised_session() {
+				debug::info!("--- offchain_worker start block_number: {:?}, session_id: {}", block_number, session_id);
+
 				if let Err(error) = Self::generate_session_numbers_and_send(block_number, session_id) {
-					debug::RuntimeLogger::init();
 					debug::info!("--- offchain_worker error: {}", error);
 				}
 			}
+
+			const LOCK_DURATION_IN_BLOCKS: u32 = 3;
+			let mut lock_nft = StorageLock::<BlockAndTime<Self>>::with_block_deadline(b"jackblock_nft::lock", LOCK_DURATION_IN_BLOCKS);
 			
-			// TODO - set offchain worker lock to do not start twice for the same PendingWinnersNFT
 			let pending_winners_nft = Self::pending_winners_nft();
 			if pending_winners_nft.len() > 0 {
-				Self::generafte_pending_winners_nft(pending_winners_nft);
+				if let Ok(_guard) = lock_nft.try_lock() {
+					Self::generafte_pending_winners_nft(pending_winners_nft);
+				}
 			}
 		}
 
@@ -292,7 +301,6 @@ decl_module! {
 
 			Self::deposit_event(RawEvent::SessionResults(payload.session_id, payload.session_numbers, winners.clone()));
 
-			debug::RuntimeLogger::init();
 			debug::info!("--- Finalize_the_session: {}", payload.session_id);
 			debug::info!("--- Session_numbers: {:?}", payload.session_numbers);
 			debug::info!("--- Winners: {:?}", winners);
@@ -462,27 +470,30 @@ impl<T: Config> Module<T> {
 	}
 
 	fn fetch_nft_hash(nft_request_data: NFTRequestDataOf<T>) -> Result<Vec<u8>, Error<T>> {
-		const HTTP_REMOTE_REQUEST: &str = "http://svg-bonanza:3000/api/create-erc721-metadata";
+		let base_url = "http://localhost:3000".to_string();
+		let http_url = "{BASE_URL}/api/create-erc721-metadata"
+			.to_string()
+			.replace("{BASE_URL}", &base_url);
 		const FETCH_TIMEOUT_PERIOD: u64 = 15_000;
 
 		let reward = TryInto::<u128>::try_into(nft_request_data.reward).unwrap_or(0);
 
 		let request_body = "{
-			\"score\": <SCORE>, 
-			\"scoreOutOf\": <SCORE_OUT_OF>,
-			\"reward\": <REWARD>,
-			\"sessionId\": <SESSION_ID>
+			\"score\": {SCORE}, 
+			\"scoreOutOf\": {SCORE_OUT_OF},
+			\"reward\": {REWARD},
+			\"sessionId\": {SESSION_ID}
 		}"
 			.to_string()
-			.replace("<SCORE>", &nft_request_data.score.to_string())
-			.replace("<SCORE_OUT_OF>", &nft_request_data.score_out_of.to_string())
-			.replace("<REWARD>", &reward.to_string())
-			.replace("<SESSION_ID>", &nft_request_data.session_id.to_string());
+			.replace("{SCORE}", &nft_request_data.score.to_string())
+			.replace("{SCORE_OUT_OF}", &nft_request_data.score_out_of.to_string())
+			.replace("{REWARD}", &reward.to_string())
+			.replace("{SESSION_ID}", &nft_request_data.session_id.to_string());
 
 		let mut request_vector = Vec::new();
 		request_vector.push(request_body.clone());
 
-		let request = rt_offchain::http::Request::post(HTTP_REMOTE_REQUEST, request_vector);
+		let request = rt_offchain::http::Request::post(&http_url, request_vector);
 
 		let timeout = sp_io::offchain::timestamp()
 			.add(rt_offchain::Duration::from_millis(FETCH_TIMEOUT_PERIOD));
@@ -557,30 +568,27 @@ impl<T: Config> ValidateUnsigned for Module<T> {
 	fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {
 		match call {
 			Call::finalize_the_session(ref payload, ref signature) => {
-				let valid_signature = SignedPayload::<T>::verify::<T::AuthorityId>(payload, signature.clone());
-				if !valid_signature {
-					return InvalidTransaction::BadProof.into();
-				}
-
 				// TODO - use aura keys to check authority
 
 				let account_id = payload.public.clone().into_account();
 				if !Self::is_authority_account(&account_id) {
 					return InvalidTransaction::BadProof.into();
 				}
-
-				return ValidTransaction::with_tag_prefix("JackBlock/validate_unsigned/finalize_the_session")
-					.priority(UNSIGNED_TX_PRIORITY)
-					.longevity(5)
-					.propagate(true)
-					.build();
-			},
-			Call::add_nft_hash_to_winner(_ntf_request_data, ref payload, ref signature) => {
+				
 				let valid_signature = SignedPayload::<T>::verify::<T::AuthorityId>(payload, signature.clone());
 				if !valid_signature {
 					return InvalidTransaction::BadProof.into();
 				}
 
+				return ValidTransaction::with_tag_prefix("JackBlock/validate_unsigned/finalize_the_session")
+					.priority(UNSIGNED_TX_PRIORITY)
+					.and_provides(account_id)
+					.and_provides(payload.session_id)
+					.longevity(5)
+					.propagate(true)
+					.build();
+			},
+			Call::add_nft_hash_to_winner(_ntf_request_data, ref payload, ref signature) => {
 				// TODO - Refactor this method to be used in finalize_the_session & add_nft_hash_to_winner
 				// TODO - use aura keys to check authority
 
@@ -589,13 +597,27 @@ impl<T: Config> ValidateUnsigned for Module<T> {
 					return InvalidTransaction::BadProof.into();
 				}
 
+				let valid_signature = SignedPayload::<T>::verify::<T::AuthorityId>(payload, signature.clone());
+				if !valid_signature {
+					return InvalidTransaction::BadProof.into();
+				}
+
 				return ValidTransaction::with_tag_prefix("JackBlock/validate_unsigned/add_nft_hash_to_winner")
 					.priority(UNSIGNED_TX_PRIORITY)
+					.and_provides(account_id)
+					.and_provides(&payload.nft_hash)
 					.longevity(5)
 					.propagate(true)
 					.build();
 			}
 			_ => return InvalidTransaction::Call.into(),
 		};
+	}
+}
+
+impl<T: Config> rt_offchain::storage_lock::BlockNumberProvider for Module<T> {
+	type BlockNumber = T::BlockNumber;
+	fn current_block_number() -> Self::BlockNumber {
+		<frame_system::Module<T>>::block_number()
 	}
 }
