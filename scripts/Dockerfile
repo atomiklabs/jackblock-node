@@ -1,3 +1,24 @@
+# ===== PREPARATION STAGE ======
+FROM paritytech/ci-linux:production as planner
+WORKDIR /substrate
+# We only pay the installation cost once, 
+# it will be cached from the second build onwards
+# To ensure a reproducible build consider pinning 
+# the cargo-chef version with `--version X.X.X`
+RUN cargo install cargo-chef 
+COPY . .
+RUN cargo chef prepare  --recipe-path recipe.json
+
+# ===== READ-TRHOUGH CACHE STAGE ======
+
+FROM paritytech/ci-linux:production as cacher
+WORKDIR /substrate
+RUN cargo install cargo-chef
+COPY --from=planner /substrate/recipe.json recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json
+
+# ===== OPTIMIZED COMPILE STAGE ======
+
 FROM paritytech/ci-linux:production as builder
 LABEL description="This is the build stage for Jack Block. Here we create the binary."
 
@@ -6,9 +27,13 @@ WORKDIR /substrate
 
 COPY . /substrate
 
+# Copy over the cached dependencies
+COPY --from=cacher /substrate/target /substrate/target
+COPY --from=cacher /usr/local/cargo /usr/local/cargo
+
 RUN cargo build --$PROFILE
 
-# ===== SECOND STAGE ======
+# ===== BUILD STAGE ======
 
 FROM debian:buster-slim
 LABEL description="This is the 2nd stage: a very small image where we copy the Jackblock binary."
